@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>D-Day · 시계 · 타이머 · 스톱워치</title>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root{
+    --bg:#000000;
+    --blob-1:#0A6CFF;
+    --blob-2:#8B3DFF;
+    --blob-3:#17C97B;
+    --blob-4:#3A2DB8;
+    --glass-bg:rgba(255,255,255,0.07);
+    --glass-bg-strong:rgba(255,255,255,0.10);
+    --glass-border:rgba(255,255,255,0.16);
+    --text-primary:#F5F5F7;
+    --text-secondary:rgba(245,245,247,0.56);
+    --accent:#0A84FF;
+    --accent-done:#30D158;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:'Pretendard', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+      'Apple SD Gothic Neo', 'Helvetica Neue', sans-serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Aurora background ---------- */
+  .aurora{
+    position:fixed; inset:0; z-index:0; overflow:hidden;
+  }
+  .blob{
+    position:absolute;
+    width:48vmax; height:48vmax;
+    border-radius:50%;
+    filter:blur(90px);
+    opacity:0.45;
+    will-change:transform;
+  }
+  .blob.b1{ background:var(--blob-1); top:-18%; left:-12%; animation:drift1 26s ease-in-out infinite; }
+  .blob.b2{ background:var(--blob-2); bottom:-22%; right:-10%; animation:drift2 32s ease-in-out infinite; }
+  .blob.b3{ background:var(--blob-3); bottom:-10%; left:8%;  animation:drift3 22s ease-in-out infinite; opacity:0.34; }
+  .blob.b4{ background:var(--blob-4); top:-10%; right:-6%;  animation:drift4 30s ease-in-out infinite; opacity:0.30; }
+
+  @keyframes drift1{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(8vmax,6vmax) scale(1.12); }
+  }
+  @keyframes drift2{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(-7vmax,-5vmax) scale(1.08); }
+  }
+  @keyframes drift3{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(5vmax,-7vmax) scale(1.15); }
+  }
+  @keyframes drift4{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(-6vmax,8vmax) scale(1.1); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .blob{ animation:none !important; }
+  }
+
+  /* ---------- Layout ---------- */
+  .app{
+    position:relative; z-index:1;
+    height:100vh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center;
+    padding:24px;
+    opacity:0; transform:scale(0.96);
+    animation:appear 0.7s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes appear{ to{ opacity:1; transform:scale(1); } }
+
+  .topbar{
+    position:relative;
+    width:100%; max-width:920px;
+    display:flex; align-items:center; justify-content:center;
+    margin-top:max(4px, env(safe-area-inset-top));
+    flex:0 0 auto;
+  }
+
+  .tabs{
+    display:flex; gap:2px;
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    padding:4px;
+    border-radius:999px;
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    max-width:100%;
+    overflow-x:auto;
+    -ms-overflow-style:none; scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{
+    border:none; background:transparent; color:var(--text-secondary);
+    font-family:inherit; font-size:0.82rem; font-weight:600;
+    padding:9px 14px; border-radius:999px; cursor:pointer;
+    white-space:nowrap; flex:0 0 auto;
+    transition:background .25s ease, color .25s ease;
+  }
+  .tab:hover:not(.active){ color:var(--text-primary); }
+  .tab.active{ background:var(--accent); color:#fff; }
+
+  @media (max-width:480px){
+    .tab{ font-size:0.74rem; padding:8px 10px; }
+  }
+
+  .settings-btn{
+    position:absolute; top:0; right:0;
+    width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    cursor:pointer; color:var(--text-secondary);
+    transition:transform .25s ease, background .25s ease, color .25s ease, opacity .2s ease;
+  }
+  .settings-btn:hover{ background:var(--glass-bg-strong); color:var(--text-primary); transform:rotate(20deg); }
+  .settings-btn svg{ width:20px; height:20px; }
+  #appRoot[data-mode="timer"] .settings-btn,
+  #appRoot[data-mode="stopwatch"] .settings-btn{ opacity:0; pointer-events:none; }
+
+  .views{
+    flex:1 1 auto; width:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .view{
+    display:flex; flex-direction:column;
+    align-items:center; gap:28px;
+    text-align:center; max-width:920px; width:100%;
+  }
+  .view[hidden]{ display:none; }
+
+  .hero{
+    display:flex; flex-direction:column;
+    align-items:center; gap:28px;
+    text-align:center; max-width:920px; width:100%;
+  }
+
+  .eyebrow{
+    font-size:clamp(1rem, 2.6vw, 1.35rem);
+    font-weight:600;
+    letter-spacing:0.01em;
+    color:var(--text-secondary);
+    transition:color .3s ease;
+    word-break:keep-all;
+  }
+  .eyebrow.done{ color:var(--accent-done); }
+  .eyebrow.break{ color:var(--accent-done); }
+
+  .pomo-dots{
+    display:flex; gap:9px; justify-content:center; flex-wrap:wrap;
+  }
+  .pomo-dot{
+    width:9px; height:9px; border-radius:50%;
+    background:rgba(255,255,255,0.18);
+    transition:background .25s ease, transform .25s ease;
+  }
+  .pomo-dot.filled{ background:var(--accent); transform:scale(1.25); }
+
+  .tiles{
+    display:flex; gap:clamp(10px, 2vw, 20px);
+    flex-wrap:wrap; justify-content:center;
+  }
+  .tile{
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    border-radius:28px;
+    backdrop-filter:blur(34px) saturate(180%);
+    -webkit-backdrop-filter:blur(34px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      0 18px 40px rgba(0,0,0,0.45);
+    padding:clamp(16px,3vw,28px) clamp(14px,3.4vw,30px);
+    min-width:clamp(78px, 20vw, 140px);
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .num{
+    font-size:clamp(2.4rem, 9vw, 5.2rem);
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+    letter-spacing:-0.02em;
+    color:#fff;
+    text-shadow:0 0 24px rgba(255,255,255,0.25);
+  }
+  .unit{
+    font-size:clamp(0.75rem, 1.6vw, 0.95rem);
+    font-weight:500;
+    color:var(--text-secondary);
+    letter-spacing:0.02em;
+  }
+
+  .target-date{
+    font-size:clamp(0.85rem, 1.8vw, 1rem);
+    color:var(--text-secondary);
+    font-weight:500;
+  }
+
+  /* ---------- Bottom sheet ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:5;
+    background:rgba(0,0,0,0.5);
+    backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+
+  .sheet{
+    position:fixed; left:50%; bottom:0; z-index:6;
+    width:min(420px, 100vw);
+    transform:translate(-50%, 110%);
+    background:rgba(28,28,30,0.72);
+    border:1px solid var(--glass-border);
+    border-bottom:none;
+    border-radius:28px 28px 0 0;
+    backdrop-filter:blur(40px) saturate(180%);
+    -webkit-backdrop-filter:blur(40px) saturate(180%);
+    box-shadow:0 -10px 60px rgba(0,0,0,0.5);
+    padding:14px 26px max(28px, env(safe-area-inset-bottom));
+    transition:transform .42s cubic-bezier(.2,.9,.2,1);
+  }
+  .sheet.open{ transform:translate(-50%, 0); }
+
+  .sheet-handle{
+    width:36px; height:5px; border-radius:3px;
+    background:rgba(255,255,255,0.25);
+    margin:0 auto 18px;
+  }
+  .sheet h2{
+    margin:0 0 20px; font-size:1.15rem; font-weight:700;
+    text-align:center;
+  }
+  .field{ display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+  .field span{
+    font-size:0.8rem; font-weight:600; color:var(--text-secondary);
+    letter-spacing:0.01em;
+  }
+  .field input{
+    background:rgba(255,255,255,0.06);
+    border:1px solid var(--glass-border);
+    border-radius:14px;
+    padding:13px 14px;
+    font-size:1rem;
+    color:var(--text-primary);
+    font-family:inherit;
+    outline:none;
+    transition:border-color .2s ease, background .2s ease;
+  }
+  .field input::placeholder{ color:rgba(245,245,247,0.32); }
+  .field input:focus{ border-color:var(--accent); background:rgba(255,255,255,0.09); }
+  .field input[type="date"], .field input[type="time"]{ color-scheme:dark; }
+
+  .theme-row{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .swatch{
+    width:42px; height:42px; border-radius:50%;
+    border:2px solid transparent;
+    padding:0; cursor:pointer;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18);
+    transition:transform .15s ease, border-color .2s ease;
+    flex:0 0 auto;
+  }
+  .swatch:hover{ transform:scale(1.08); }
+  .swatch.selected{
+    border-color:#fff;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.3), 0 0 0 3px rgba(255,255,255,0.12);
+  }
+  .theme-name{
+    font-size:0.8rem; color:var(--text-secondary); margin-top:8px; min-height:1em;
+  }
+
+  /* ---------- Segmented control ---------- */
+  .segmented{
+    display:flex; gap:2px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid var(--glass-border);
+    border-radius:14px;
+    padding:3px;
+  }
+  .segmented button{
+    flex:1; border:none; background:transparent;
+    color:var(--text-secondary);
+    font-family:inherit; font-weight:600; font-size:0.85rem;
+    padding:10px 0; border-radius:11px; cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  .segmented button.active{ background:var(--accent); color:#fff; }
+
+  /* ---------- Switch (toggle) ---------- */
+  .switch-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0;
+  }
+  .switch-row + .switch-row{ border-top:1px solid rgba(255,255,255,0.08); }
+  .switch-row .label{
+    font-size:0.92rem; font-weight:500; color:var(--text-primary);
+  }
+  .switch{ position:relative; display:inline-block; width:46px; height:28px; flex:0 0 auto; }
+  .switch input{ position:absolute; opacity:0; width:0; height:0; }
+  .switch .track{
+    position:absolute; inset:0;
+    background:rgba(255,255,255,0.18);
+    border-radius:999px; cursor:pointer;
+    transition:background .2s ease;
+  }
+  .switch .thumb{
+    position:absolute; top:3px; left:3px;
+    width:22px; height:22px; border-radius:50%;
+    background:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    transition:transform .2s ease;
+  }
+  .switch input:checked + .track{ background:var(--accent); }
+  .switch input:checked + .track .thumb{ transform:translateX(18px); }
+  .switch input:disabled + .track{ opacity:0.4; cursor:not-allowed; }
+
+  .sheet-actions{
+    display:flex; gap:10px; margin-top:8px;
+  }
+  .sheet-actions button{
+    flex:1; padding:14px; border:none; border-radius:16px;
+    font-size:1rem; font-weight:600; font-family:inherit;
+    cursor:pointer; transition:opacity .2s ease, transform .15s ease;
+  }
+  .sheet-actions button:active{ transform:scale(0.97); }
+  #cancelBtn{ background:rgba(255,255,255,0.08); color:var(--text-primary); }
+  #saveBtn{ background:var(--accent); color:#fff; }
+  #cancelBtn:hover, #saveBtn:hover{ opacity:0.85; }
+
+  @media (max-width:420px){
+    .tiles{ max-width:280px; }
+    .tile{ flex:1 1 calc(50% - 10px); min-width:0; }
+  }
+
+  /* ---------- Number input tiles (timer) ---------- */
+  .num-input{
+    width:100%; min-width:0;
+    background:transparent; border:none; outline:none;
+    color:#fff; font-family:inherit;
+    font-size:clamp(2.4rem, 9vw, 5.2rem);
+    font-weight:700; font-variant-numeric:tabular-nums;
+    line-height:1; letter-spacing:-0.02em; text-align:center;
+    text-shadow:0 0 24px rgba(255,255,255,0.25);
+    -moz-appearance:textfield;
+  }
+  .num-input::-webkit-outer-spin-button,
+  .num-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .num-input:read-only{ opacity:0.9; }
+  .num-input:focus{ opacity:1; }
+
+  /* ---------- Clock ---------- */
+  .clock-face{
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    border-radius:32px;
+    backdrop-filter:blur(34px) saturate(180%);
+    -webkit-backdrop-filter:blur(34px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.18),
+      0 18px 40px rgba(0,0,0,0.45);
+    padding:clamp(30px,6vw,56px) clamp(28px,8vw,84px);
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .clock-time{
+    font-size:clamp(2.6rem, 11vw, 6rem);
+    font-weight:700; font-variant-numeric:tabular-nums;
+    letter-spacing:-0.02em; color:#fff;
+    text-shadow:0 0 24px rgba(255,255,255,0.25);
+    line-height:1;
+  }
+  .clock-date{
+    font-size:clamp(0.85rem, 1.8vw, 1rem);
+    color:var(--text-secondary); font-weight:500;
+  }
+
+  .chip-row{
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+  }
+  .chip{
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    color:var(--text-secondary);
+    padding:9px 16px; border-radius:999px;
+    font-size:0.8rem; font-weight:600;
+    cursor:pointer; font-family:inherit;
+    transition:background .2s ease, color .2s ease, opacity .2s ease;
+  }
+  .chip:hover:not(:disabled){ background:var(--glass-bg-strong); color:var(--text-primary); }
+  .chip:disabled{ opacity:0.35; cursor:not-allowed; }
+  .chip.active{ background:var(--accent); color:#fff; border-color:transparent; }
+
+  /* ---------- Controls (timer / stopwatch) ---------- */
+  .controls{
+    display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
+  }
+  .ctrl-btn{
+    padding:14px 30px; border:none; border-radius:999px;
+    font-size:0.95rem; font-weight:700; font-family:inherit;
+    cursor:pointer; min-width:88px;
+    transition:opacity .2s ease, transform .15s ease, background .2s ease;
+  }
+  .ctrl-btn:active:not(:disabled){ transform:scale(0.96); }
+  .ctrl-btn.primary{ background:var(--accent); color:#fff; }
+  .ctrl-btn.secondary{ background:var(--glass-bg); color:var(--text-primary); border:1px solid var(--glass-border); }
+  .ctrl-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+  .ctrl-btn:hover:not(:disabled){ opacity:0.85; }
+
+  .pulse{ animation:pulseGlow 1s ease-in-out infinite; }
+  @keyframes pulseGlow{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.45; }
+  }
+
+  /* ---------- Laps ---------- */
+  .laps{
+    width:min(380px, 90vw);
+    max-height:190px;
+    overflow-y:auto;
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    border-radius:20px;
+    padding:4px 6px;
+  }
+  .laps:empty{ display:none; }
+  .lap-row{
+    display:flex; justify-content:space-between; gap:12px;
+    padding:11px 14px;
+    font-size:0.85rem; font-variant-numeric:tabular-nums;
+    color:var(--text-secondary);
+    border-bottom:1px solid rgba(255,255,255,0.07);
+  }
+  .lap-row:last-child{ border-bottom:none; }
+  .lap-row .lap-idx{ color:var(--text-primary); font-weight:600; }
+  .lap-row.fastest .lap-time{ color:var(--accent-done); }
+  .lap-row.slowest .lap-time{ color:#FF6482; }
+
+  .credit{
+    position:fixed; left:0; right:0; bottom:max(14px, env(safe-area-inset-bottom));
+    z-index:2;
+    text-align:center;
+    font-size:0.72rem;
+    font-weight:500;
+    letter-spacing:0.03em;
+    color:rgba(245,245,247,0.32);
+    pointer-events:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="aurora">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="blob b4"></div>
+</div>
+
+<div class="app" id="appRoot" data-mode="dday">
+  <div class="topbar">
+    <div class="tabs" id="tabs" role="tablist">
+      <button class="tab active" type="button" data-tab="dday">디데이</button>
+      <button class="tab" type="button" data-tab="clock">시계</button>
+      <button class="tab" type="button" data-tab="timer">타이머</button>
+      <button class="tab" type="button" data-tab="stopwatch">스톱워치</button>
+      <button class="tab" type="button" data-tab="pomodoro">뽀모도로</button>
+    </div>
+    <button class="settings-btn" id="settingsBtn" aria-label="설정">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="views">
+    <!-- D-Day -->
+    <section class="view" id="view-dday">
+      <div class="eyebrow" id="eyebrow">디데이</div>
+      <div class="tiles">
+        <div class="tile"><span class="num" id="dNum">00</span><span class="unit">일</span></div>
+        <div class="tile"><span class="num" id="hNum">00</span><span class="unit">시간</span></div>
+        <div class="tile"><span class="num" id="mNum">00</span><span class="unit">분</span></div>
+        <div class="tile"><span class="num" id="sNum">00</span><span class="unit">초</span></div>
+      </div>
+      <div class="target-date" id="targetDateLabel">2026년 7월 28일 (화) 00:00</div>
+    </section>
+
+    <!-- Clock -->
+    <section class="view" id="view-clock" hidden>
+      <div class="clock-face">
+        <div class="clock-time" id="clockTime">00:00:00</div>
+        <div class="clock-date" id="clockDate">2026년 7월 10일 (금)</div>
+      </div>
+    </section>
+
+    <!-- Timer -->
+    <section class="view" id="view-timer" hidden>
+      <div class="eyebrow" id="timerLabel">타이머</div>
+      <div class="tiles">
+        <div class="tile">
+          <input class="num-input" id="timerH" type="number" inputmode="numeric" min="0" max="99" value="00" aria-label="시간" />
+          <span class="unit">시간</span>
+        </div>
+        <div class="tile">
+          <input class="num-input" id="timerM" type="number" inputmode="numeric" min="0" max="59" value="00" aria-label="분" />
+          <span class="unit">분</span>
+        </div>
+        <div class="tile">
+          <input class="num-input" id="timerS" type="number" inputmode="numeric" min="0" max="59" value="00" aria-label="초" />
+          <span class="unit">초</span>
+        </div>
+      </div>
+      <div class="chip-row" id="timerPresets">
+        <button class="chip" type="button" data-sec="60">1분</button>
+        <button class="chip" type="button" data-sec="180">3분</button>
+        <button class="chip" type="button" data-sec="300">5분</button>
+        <button class="chip" type="button" data-sec="600">10분</button>
+        <button class="chip" type="button" data-sec="1800">30분</button>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn secondary" type="button" id="timerResetBtn">리셋</button>
+        <button class="ctrl-btn primary" type="button" id="timerStartBtn">시작</button>
+      </div>
+    </section>
+
+    <!-- Stopwatch -->
+    <section class="view" id="view-stopwatch" hidden>
+      <div class="eyebrow" id="swLabel">스톱워치</div>
+      <div class="tiles">
+        <div class="tile"><span class="num" id="swH">00</span><span class="unit">시간</span></div>
+        <div class="tile"><span class="num" id="swM">00</span><span class="unit">분</span></div>
+        <div class="tile"><span class="num" id="swS">00</span><span class="unit">초</span></div>
+        <div class="tile"><span class="num" id="swCs">00</span><span class="unit">1/100초</span></div>
+      </div>
+      <div class="controls">
+        <button class="ctrl-btn secondary" type="button" id="swLapBtn" disabled>랩</button>
+        <button class="ctrl-btn primary" type="button" id="swStartBtn">시작</button>
+        <button class="ctrl-btn secondary" type="button" id="swResetBtn" disabled>리셋</button>
+      </div>
+      <div class="laps" id="swLaps"></div>
+    </section>
+
+    <!-- Pomodoro -->
+    <section class="view" id="view-pomodoro" hidden>
+      <div class="eyebrow" id="pomoLabel">집중</div>
+      <div class="tiles">
+        <div class="tile"><span class="num" id="pomoM">25</span><span class="unit">분</span></div>
+        <div class="tile"><span class="num" id="pomoS">00</span><span class="unit">초</span></div>
+      </div>
+      <div class="pomo-dots" id="pomoDots"></div>
+      <div class="controls">
+        <button class="ctrl-btn secondary" type="button" id="pomoResetBtn">리셋</button>
+        <button class="ctrl-btn primary" type="button" id="pomoStartBtn">시작</button>
+        <button class="ctrl-btn secondary" type="button" id="pomoSkipBtn">건너뛰기</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="credit">Made by HS</div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <h2>설정</h2>
+  <div class="field">
+    <span>테마</span>
+    <div class="theme-row" id="themeRow"></div>
+    <div class="theme-name" id="themeName"></div>
+  </div>
+  <div class="field">
+    <span>제목</span>
+    <input type="text" id="inputTitle" placeholder="예: 수능까지, 여행까지" maxlength="30" />
+  </div>
+  <div class="field">
+    <span>날짜</span>
+    <input type="date" id="inputDate" />
+  </div>
+  <div class="field">
+    <span>시간</span>
+    <input type="time" id="inputTime" />
+  </div>
+  <div class="sheet-actions">
+    <button id="cancelBtn">취소</button>
+    <button id="saveBtn">저장</button>
+  </div>
+</div>
+
+<div class="sheet" id="clockSheet">
+  <div class="sheet-handle"></div>
+  <h2>시계 설정</h2>
+  <div class="field">
+    <span>시간 표시</span>
+    <div class="segmented" id="clockFormatSeg">
+      <button type="button" data-val="24">24시간제</button>
+      <button type="button" data-val="12">12시간제</button>
+    </div>
+  </div>
+  <div class="field">
+    <div class="switch-row">
+      <span class="label">초 표시</span>
+      <label class="switch">
+        <input type="checkbox" id="optSeconds" />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+    </div>
+    <div class="switch-row">
+      <span class="label">날짜 표시</span>
+      <label class="switch">
+        <input type="checkbox" id="optDate" />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+    </div>
+    <div class="switch-row">
+      <span class="label">요일 표시</span>
+      <label class="switch">
+        <input type="checkbox" id="optWeekday" />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+    </div>
+  </div>
+  <div class="sheet-actions">
+    <button id="clockSheetCloseBtn" style="flex:1">닫기</button>
+  </div>
+</div>
+
+<div class="sheet" id="pomoSheet">
+  <div class="sheet-handle"></div>
+  <h2>뽀모도로 설정</h2>
+  <div class="field">
+    <span>집중 시간 (분)</span>
+    <input type="number" id="pomoFocusInput" min="1" max="180" value="25" />
+  </div>
+  <div class="field">
+    <span>짧은 휴식 (분)</span>
+    <input type="number" id="pomoShortInput" min="1" max="60" value="5" />
+  </div>
+  <div class="field">
+    <span>긴 휴식 (분)</span>
+    <input type="number" id="pomoLongInput" min="1" max="90" value="15" />
+  </div>
+  <div class="field">
+    <span>긴 휴식까지 세션 수</span>
+    <input type="number" id="pomoSessionsInput" min="1" max="12" value="4" />
+  </div>
+  <div class="sheet-actions">
+    <button id="pomoCancelBtn">취소</button>
+    <button id="pomoSaveBtn">저장</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var appRoot = document.getElementById('appRoot');
+  var eyebrow = document.getElementById('eyebrow');
+  var targetDateLabel = document.getElementById('targetDateLabel');
+  var dNum = document.getElementById('dNum');
+  var hNum = document.getElementById('hNum');
+  var mNum = document.getElementById('mNum');
+  var sNum = document.getElementById('sNum');
+
+  var settingsBtn = document.getElementById('settingsBtn');
+  var overlay = document.getElementById('overlay');
+  var sheet = document.getElementById('sheet');
+  var inputTitle = document.getElementById('inputTitle');
+  var inputDate = document.getElementById('inputDate');
+  var inputTime = document.getElementById('inputTime');
+  var cancelBtn = document.getElementById('cancelBtn');
+  var saveBtn = document.getElementById('saveBtn');
+  var themeRow = document.getElementById('themeRow');
+  var themeName = document.getElementById('themeName');
+
+  // Tabs
+  var tabButtons = document.querySelectorAll('.tab');
+  var views = {
+    dday: document.getElementById('view-dday'),
+    clock: document.getElementById('view-clock'),
+    timer: document.getElementById('view-timer'),
+    stopwatch: document.getElementById('view-stopwatch'),
+    pomodoro: document.getElementById('view-pomodoro')
+  };
+
+  // Clock
+  var clockTime = document.getElementById('clockTime');
+  var clockDate = document.getElementById('clockDate');
+  var clockSheet = document.getElementById('clockSheet');
+  var clockFormatSeg = document.getElementById('clockFormatSeg');
+  var optSeconds = document.getElementById('optSeconds');
+  var optDate = document.getElementById('optDate');
+  var optWeekday = document.getElementById('optWeekday');
+  var clockSheetCloseBtn = document.getElementById('clockSheetCloseBtn');
+
+  // Timer
+  var timerLabel = document.getElementById('timerLabel');
+  var timerH = document.getElementById('timerH');
+  var timerM = document.getElementById('timerM');
+  var timerS = document.getElementById('timerS');
+  var timerPresets = document.getElementById('timerPresets');
+  var timerStartBtn = document.getElementById('timerStartBtn');
+  var timerResetBtn = document.getElementById('timerResetBtn');
+
+  // Stopwatch
+  var swLabel = document.getElementById('swLabel');
+  var swH = document.getElementById('swH');
+  var swM = document.getElementById('swM');
+  var swS = document.getElementById('swS');
+  var swCs = document.getElementById('swCs');
+  var swStartBtn = document.getElementById('swStartBtn');
+  var swLapBtn = document.getElementById('swLapBtn');
+  var swResetBtn = document.getElementById('swResetBtn');
+  var swLaps = document.getElementById('swLaps');
+
+  // Pomodoro
+  var pomoLabel = document.getElementById('pomoLabel');
+  var pomoM = document.getElementById('pomoM');
+  var pomoS = document.getElementById('pomoS');
+  var pomoDots = document.getElementById('pomoDots');
+  var pomoStartBtn = document.getElementById('pomoStartBtn');
+  var pomoResetBtn = document.getElementById('pomoResetBtn');
+  var pomoSkipBtn = document.getElementById('pomoSkipBtn');
+  var pomoSheet = document.getElementById('pomoSheet');
+  var pomoFocusInput = document.getElementById('pomoFocusInput');
+  var pomoShortInput = document.getElementById('pomoShortInput');
+  var pomoLongInput = document.getElementById('pomoLongInput');
+  var pomoSessionsInput = document.getElementById('pomoSessionsInput');
+  var pomoCancelBtn = document.getElementById('pomoCancelBtn');
+  var pomoSaveBtn = document.getElementById('pomoSaveBtn');
+
+  var THEMES = [
+    { id:'aurora',  name:'오로라 (블루·퍼플·그린)', colors:['#0A6CFF','#8B3DFF','#17C97B','#3A2DB8'], accent:'#0A6CFF' },
+    { id:'ocean',   name:'오션 (틸·블루·시안)',      colors:['#00C7BE','#0A84FF','#64D2FF','#1B4965'], accent:'#00C7BE' },
+    { id:'cosmic',  name:'코스믹 (마젠타·인디고)',    colors:['#BF5AF2','#5E5CE6','#FF2D78','#3634A3'], accent:'#BF5AF2' },
+    { id:'forest',  name:'포레스트 (그린 톤)',        colors:['#17C97B','#34D399','#0EA968','#0B6E4F'], accent:'#17C97B' },
+    { id:'sunset',  name:'선셋 (오렌지·핑크·퍼플)',   colors:['#FF9F0A','#FF375F','#FF6482','#BF5AF2'], accent:'#FF6482' },
+    { id:'mono',    name:'모노 (그레이스케일)',       colors:['#E5E5EA','#AEAEB2','#8E8E93','#48484A'], accent:'#636366' }
+  ];
+
+  var WEEKDAYS = ['일','월','화','수','목','금','토'];
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function defaultTarget(){
+    var d = new Date();
+    d.setDate(d.getDate() + 30);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function encodeState(state){
+    try{
+      return btoa(encodeURIComponent(JSON.stringify(state)));
+    }catch(e){ return ''; }
+  }
+  function decodeState(hash){
+    try{
+      var json = decodeURIComponent(atob(hash));
+      var obj = JSON.parse(json);
+      if(obj && obj.title && obj.date){
+        if(!obj.theme) obj.theme = 'aurora';
+        if(!obj.mode) obj.mode = 'dday';
+        if(typeof obj.clock24 !== 'boolean') obj.clock24 = true;
+        if(typeof obj.showSeconds !== 'boolean') obj.showSeconds = true;
+        if(typeof obj.showDate !== 'boolean') obj.showDate = true;
+        if(typeof obj.showWeekday !== 'boolean') obj.showWeekday = true;
+        if(!obj.pomo) obj.pomo = {};
+        if(!obj.pomo.focusMin) obj.pomo.focusMin = 25;
+        if(!obj.pomo.shortMin) obj.pomo.shortMin = 5;
+        if(!obj.pomo.longMin) obj.pomo.longMin = 15;
+        if(!obj.pomo.sessionsUntilLong) obj.pomo.sessionsUntilLong = 4;
+        return obj;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function loadState(){
+    var hash = '';
+    try{ hash = window.location.hash.replace('#',''); }catch(e){}
+    if(hash){
+      var decoded = decodeState(hash);
+      if(decoded) return decoded;
+    }
+    var def = defaultTarget();
+    return {
+      title: '디데이',
+      date: def.toISOString().slice(0,10),
+      time: '00:00',
+      theme: 'aurora',
+      mode: 'dday',
+      clock24: true,
+      showSeconds: true,
+      showDate: true,
+      showWeekday: true,
+      pomo: { focusMin: 25, shortMin: 5, longMin: 15, sessionsUntilLong: 4 }
+    };
+  }
+
+  function saveStateToHash(state){
+    // 직접 호스팅하는 도메인에서는 정상적으로 URL에 저장되어 새로고침 후에도 유지됩니다.
+    // 단, 일부 미리보기 환경(예: srcdoc 기반 iframe)은 보안상 history API 사용을 막아두므로,
+    // 그런 경우엔 조용히 무시하고 메모리상의 state만 사용합니다.
+    try{
+      var encoded = encodeState(state);
+      if(encoded) window.history.replaceState(null, '', '#' + encoded);
+    }catch(e){
+      /* 새로고침 유지가 불가능한 환경 — 정상 동작에는 영향 없음 */
+    }
+  }
+
+  var state = loadState();
+
+  function targetDate(){
+    return new Date(state.date + 'T' + state.time + ':00');
+  }
+
+  function formatKorean(date){
+    var y = date.getFullYear();
+    var m = date.getMonth() + 1;
+    var d = date.getDate();
+    var w = WEEKDAYS[date.getDay()];
+    var hh = pad(date.getHours());
+    var mm = pad(date.getMinutes());
+    return y + '년 ' + m + '월 ' + d + '일 (' + w + ') ' + hh + ':' + mm;
+  }
+
+  function findTheme(id){
+    for(var i=0;i<THEMES.length;i++){ if(THEMES[i].id === id) return THEMES[i]; }
+    return THEMES[0];
+  }
+
+  function applyTheme(id){
+    var theme = findTheme(id);
+    var root = document.documentElement.style;
+    root.setProperty('--blob-1', theme.colors[0]);
+    root.setProperty('--blob-2', theme.colors[1]);
+    root.setProperty('--blob-3', theme.colors[2]);
+    root.setProperty('--blob-4', theme.colors[3]);
+    root.setProperty('--accent', theme.accent);
+    themeName.textContent = theme.name;
+    var swatchEls = themeRow.querySelectorAll('.swatch');
+    for(var i=0;i<swatchEls.length;i++){
+      swatchEls[i].classList.toggle('selected', swatchEls[i].dataset.themeId === id);
+    }
+  }
+
+  function buildSwatches(){
+    THEMES.forEach(function(theme){
+      var btn = document.createElement('button');
+      btn.className = 'swatch';
+      btn.type = 'button';
+      btn.dataset.themeId = theme.id;
+      btn.setAttribute('aria-label', theme.name);
+      btn.title = theme.name;
+      btn.style.background = 'conic-gradient(from 45deg, ' +
+        theme.colors[0] + ', ' + theme.colors[1] + ', ' +
+        theme.colors[2] + ', ' + theme.colors[3] + ', ' + theme.colors[0] + ')';
+      btn.addEventListener('click', function(){
+        state.theme = this.dataset.themeId;
+        applyTheme(state.theme);
+        saveStateToHash(state);
+      });
+      themeRow.appendChild(btn);
+    });
+  }
+
+  function renderStatic(){
+    eyebrow.textContent = state.title;
+    targetDateLabel.textContent = formatKorean(targetDate());
+  }
+
+  function ddayTick(){
+    var now = new Date();
+    var target = targetDate();
+    var diff = target.getTime() - now.getTime();
+    var done = diff <= 0;
+
+    eyebrow.classList.toggle('done', done);
+    var abs = Math.abs(diff);
+
+    var totalSec = Math.floor(abs/1000);
+    var d = Math.floor(totalSec / 86400);
+    var h = Math.floor((totalSec % 86400) / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+
+    dNum.textContent = pad(d);
+    hNum.textContent = pad(h);
+    mNum.textContent = pad(m);
+    sNum.textContent = pad(s);
+
+    eyebrow.textContent = done ? (state.title + ' · D+' + d) : state.title;
+  }
+
+  /* ---------- Tabs ---------- */
+  function setMode(mode){
+    if(!views[mode]) mode = 'dday';
+    state.mode = mode;
+    appRoot.setAttribute('data-mode', mode);
+    for(var i=0;i<tabButtons.length;i++){
+      tabButtons[i].classList.toggle('active', tabButtons[i].dataset.tab === mode);
+    }
+    Object.keys(views).forEach(function(key){
+      views[key].hidden = key !== mode;
+    });
+    saveStateToHash(state);
+  }
+
+  for(var t=0;t<tabButtons.length;t++){
+    tabButtons[t].addEventListener('click', function(){
+      setMode(this.dataset.tab);
+    });
+  }
+
+  /* ---------- Clock ---------- */
+  function updateClock(){
+    var now = new Date();
+    var h = now.getHours();
+    var suffix = '';
+    if(!state.clock24){
+      suffix = h >= 12 ? ' PM' : ' AM';
+      h = h % 12; if(h === 0) h = 12;
+    }
+    var timeStr = pad(h) + ':' + pad(now.getMinutes());
+    if(state.showSeconds) timeStr += ':' + pad(now.getSeconds());
+    clockTime.textContent = timeStr + suffix;
+
+    if(state.showDate){
+      clockDate.style.display = '';
+      var dateStr = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월 ' + now.getDate() + '일';
+      if(state.showWeekday) dateStr += ' (' + WEEKDAYS[now.getDay()] + ')';
+      clockDate.textContent = dateStr;
+    } else {
+      clockDate.style.display = 'none';
+    }
+  }
+
+  function syncClockSheetUI(){
+    var segBtns = clockFormatSeg.querySelectorAll('button');
+    for(var i=0;i<segBtns.length;i++){
+      segBtns[i].classList.toggle('active', segBtns[i].dataset.val === (state.clock24 ? '24' : '12'));
+    }
+    optSeconds.checked = state.showSeconds;
+    optDate.checked = state.showDate;
+    optWeekday.checked = state.showWeekday;
+    optWeekday.disabled = !state.showDate;
+  }
+
+  clockFormatSeg.addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(!btn) return;
+    state.clock24 = btn.dataset.val === '24';
+    syncClockSheetUI();
+    saveStateToHash(state);
+    updateClock();
+  });
+
+  optSeconds.addEventListener('change', function(){
+    state.showSeconds = optSeconds.checked;
+    saveStateToHash(state);
+    updateClock();
+  });
+
+  optDate.addEventListener('change', function(){
+    state.showDate = optDate.checked;
+    optWeekday.disabled = !state.showDate;
+    saveStateToHash(state);
+    updateClock();
+  });
+
+  optWeekday.addEventListener('change', function(){
+    state.showWeekday = optWeekday.checked;
+    saveStateToHash(state);
+    updateClock();
+  });
+
+  /* ---------- Timer ---------- */
+  var timerRemaining = 0;
+  var timerRunning = false;
+  var timerIntervalId = null;
+  var audioCtx = null;
+
+  function getAudioCtx(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+    }
+    return audioCtx;
+  }
+
+  function playChime(){
+    var ctx = getAudioCtx();
+    if(!ctx) return;
+    try{
+      if(ctx.state === 'suspended') ctx.resume();
+      var notes = [880, 880, 1046.5];
+      var now = ctx.currentTime;
+      notes.forEach(function(freq, i){
+        var start = now + i * 0.35;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.3, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(start); osc.stop(start + 0.3);
+      });
+    }catch(e){}
+  }
+
+  function getTimerInputSeconds(){
+    var h = Math.max(0, parseInt(timerH.value, 10) || 0);
+    var m = Math.max(0, parseInt(timerM.value, 10) || 0);
+    var s = Math.max(0, parseInt(timerS.value, 10) || 0);
+    return h * 3600 + m * 60 + s;
+  }
+
+  function setTimerDisplay(totalSec){
+    totalSec = Math.max(0, totalSec);
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    timerH.value = pad(h);
+    timerM.value = pad(m);
+    timerS.value = pad(s);
+  }
+
+  function setTimerInputsReadonly(readonly){
+    timerH.readOnly = readonly;
+    timerM.readOnly = readonly;
+    timerS.readOnly = readonly;
+    var chips = timerPresets.querySelectorAll('.chip');
+    for(var i=0;i<chips.length;i++){ chips[i].disabled = readonly; }
+  }
+
+  function normalizeTimerInputs(){
+    if(timerRunning) return;
+    var total = getTimerInputSeconds();
+    setTimerDisplay(total);
+  }
+  [timerH, timerM, timerS].forEach(function(input){
+    input.addEventListener('change', normalizeTimerInputs);
+    input.addEventListener('blur', normalizeTimerInputs);
+  });
+
+  timerPresets.addEventListener('click', function(e){
+    var btn = e.target.closest('.chip');
+    if(!btn || timerRunning) return;
+    var sec = parseInt(btn.dataset.sec, 10) || 0;
+    timerRemaining = sec;
+    setTimerDisplay(sec);
+    timerLabel.textContent = '타이머';
+    timerLabel.classList.remove('done', 'pulse');
+  });
+
+  function onTimerFinish(){
+    timerLabel.textContent = '시간 종료!';
+    timerLabel.classList.add('done', 'pulse');
+    playChime();
+    try{ if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); }catch(e){}
+  }
+
+  timerStartBtn.addEventListener('click', function(){
+    getAudioCtx();
+    if(!timerRunning){
+      if(timerRemaining <= 0){
+        timerRemaining = getTimerInputSeconds();
+      }
+      if(timerRemaining <= 0) return;
+      timerRunning = true;
+      setTimerInputsReadonly(true);
+      timerStartBtn.textContent = '일시정지';
+      timerLabel.textContent = '타이머';
+      timerLabel.classList.remove('done', 'pulse');
+      timerIntervalId = setInterval(function(){
+        timerRemaining--;
+        if(timerRemaining <= 0){
+          timerRemaining = 0;
+          setTimerDisplay(0);
+          clearInterval(timerIntervalId);
+          timerRunning = false;
+          timerStartBtn.textContent = '시작';
+          setTimerInputsReadonly(false);
+          onTimerFinish();
+          return;
+        }
+        setTimerDisplay(timerRemaining);
+      }, 1000);
+    } else {
+      clearInterval(timerIntervalId);
+      timerRunning = false;
+      timerStartBtn.textContent = '계속';
+    }
+  });
+
+  timerResetBtn.addEventListener('click', function(){
+    clearInterval(timerIntervalId);
+    timerRunning = false;
+    timerRemaining = 0;
+    setTimerDisplay(0);
+    timerStartBtn.textContent = '시작';
+    setTimerInputsReadonly(false);
+    timerLabel.textContent = '타이머';
+    timerLabel.classList.remove('done', 'pulse');
+  });
+
+  /* ---------- Stopwatch ---------- */
+  var swElapsed = 0;
+  var swStartTs = 0;
+  var swRunning = false;
+  var swRafId = null;
+  var swLapList = [];
+
+  function formatSW(ms){
+    var totalCs = Math.floor(ms / 10);
+    var cs = totalCs % 100;
+    var totalSec = Math.floor(totalCs / 100);
+    var s = totalSec % 60;
+    var totalMin = Math.floor(totalSec / 60);
+    var m = totalMin % 60;
+    var h = Math.floor(totalMin / 60);
+    return { h: h, m: m, s: s, cs: cs };
+  }
+
+  function formatSWShort(ms){
+    var t = formatSW(ms);
+    var out = '';
+    if(t.h > 0) out += pad(t.h) + ':';
+    out += pad(t.m) + ':' + pad(t.s) + '.' + pad(t.cs);
+    return out;
+  }
+
+  function renderSW(ms){
+    var t = formatSW(ms);
+    swH.textContent = pad(t.h);
+    swM.textContent = pad(t.m);
+    swS.textContent = pad(t.s);
+    swCs.textContent = pad(t.cs);
+  }
+
+  function currentSWElapsed(){
+    return swRunning ? swElapsed + (Date.now() - swStartTs) : swElapsed;
+  }
+
+  function swLoop(){
+    renderSW(currentSWElapsed());
+    swRafId = requestAnimationFrame(swLoop);
+  }
+
+  function renderLaps(){
+    swLaps.innerHTML = '';
+    if(swLapList.length === 0) return;
+    var fastest = null, slowest = null;
+    if(swLapList.length > 1){
+      swLapList.forEach(function(l){
+        if(fastest === null || l.lap < fastest) fastest = l.lap;
+        if(slowest === null || l.lap > slowest) slowest = l.lap;
+      });
+    }
+    for(var i = swLapList.length - 1; i >= 0; i--){
+      var l = swLapList[i];
+      var row = document.createElement('div');
+      row.className = 'lap-row';
+      if(swLapList.length > 1 && l.lap === fastest) row.classList.add('fastest');
+      else if(swLapList.length > 1 && l.lap === slowest) row.classList.add('slowest');
+      row.innerHTML =
+        '<span class="lap-idx">랩 ' + (i + 1) + '</span>' +
+        '<span class="lap-time">' + formatSWShort(l.lap) + '</span>' +
+        '<span class="lap-total">' + formatSWShort(l.total) + '</span>';
+      swLaps.appendChild(row);
+    }
+  }
+
+  swStartBtn.addEventListener('click', function(){
+    if(!swRunning){
+      swRunning = true;
+      swStartTs = Date.now();
+      swStartBtn.textContent = '일시정지';
+      swLapBtn.disabled = false;
+      swResetBtn.disabled = true;
+      swRafId = requestAnimationFrame(swLoop);
+    } else {
+      swElapsed += Date.now() - swStartTs;
+      swRunning = false;
+      cancelAnimationFrame(swRafId);
+      renderSW(swElapsed);
+      swStartBtn.textContent = '계속';
+      swLapBtn.disabled = true;
+      swResetBtn.disabled = false;
+    }
+  });
+
+  swLapBtn.addEventListener('click', function(){
+    if(!swRunning) return;
+    var total = currentSWElapsed();
+    var prevTotal = swLapList.length ? swLapList[swLapList.length - 1].total : 0;
+    swLapList.push({ total: total, lap: total - prevTotal });
+    renderLaps();
+  });
+
+  swResetBtn.addEventListener('click', function(){
+    swRunning = false;
+    cancelAnimationFrame(swRafId);
+    swElapsed = 0;
+    swStartTs = 0;
+    swLapList = [];
+    renderSW(0);
+    renderLaps();
+    swStartBtn.textContent = '시작';
+    swLapBtn.disabled = true;
+    swResetBtn.disabled = true;
+  });
+
+  /* ---------- Pomodoro ---------- */
+  var pomoPhase = 'focus';
+  var pomoRemaining = 0;
+  var pomoRunning = false;
+  var pomoIntervalId = null;
+  var pomoCompleted = 0;
+
+  function pomoPhaseDuration(phase){
+    if(phase === 'focus') return state.pomo.focusMin * 60;
+    if(phase === 'short') return state.pomo.shortMin * 60;
+    return state.pomo.longMin * 60;
+  }
+
+  function pomoPhaseName(phase){
+    if(phase === 'focus') return '집중';
+    if(phase === 'short') return '짧은 휴식';
+    return '긴 휴식';
+  }
+
+  function renderPomoDisplay(){
+    var total = Math.max(0, pomoRemaining);
+    var m = Math.floor(total / 60);
+    var s = total % 60;
+    pomoM.textContent = pad(m);
+    pomoS.textContent = pad(s);
+    pomoLabel.textContent = pomoPhaseName(pomoPhase);
+    pomoLabel.classList.toggle('break', pomoPhase !== 'focus');
+  }
+
+  function renderPomoDots(){
+    pomoDots.innerHTML = '';
+    var total = state.pomo.sessionsUntilLong;
+    var filled = pomoCompleted;
+    for(var i=0;i<total;i++){
+      var dot = document.createElement('span');
+      dot.className = 'pomo-dot' + (i < filled ? ' filled' : '');
+      pomoDots.appendChild(dot);
+    }
+  }
+
+  function pomoResetToFocus(){
+    pomoPhase = 'focus';
+    pomoCompleted = 0;
+    pomoRemaining = pomoPhaseDuration('focus');
+    renderPomoDisplay();
+    renderPomoDots();
+  }
+
+  function pomoAdvancePhase(){
+    if(pomoPhase === 'focus'){
+      pomoCompleted = Math.min(pomoCompleted + 1, state.pomo.sessionsUntilLong);
+      pomoPhase = (pomoCompleted >= state.pomo.sessionsUntilLong) ? 'long' : 'short';
+    } else if(pomoPhase === 'long'){
+      pomoCompleted = 0;
+      pomoPhase = 'focus';
+    } else {
+      pomoPhase = 'focus';
+    }
+    pomoRemaining = pomoPhaseDuration(pomoPhase);
+    renderPomoDisplay();
+    renderPomoDots();
+  }
+
+  function pomoTick(){
+    pomoRemaining--;
+    if(pomoRemaining <= 0){
+      playChime();
+      try{ if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }catch(e){}
+      pomoAdvancePhase();
+    } else {
+      renderPomoDisplay();
+    }
+  }
+
+  pomoStartBtn.addEventListener('click', function(){
+    getAudioCtx();
+    if(!pomoRunning){
+      pomoRunning = true;
+      pomoStartBtn.textContent = '일시정지';
+      pomoIntervalId = setInterval(pomoTick, 1000);
+    } else {
+      pomoRunning = false;
+      clearInterval(pomoIntervalId);
+      pomoStartBtn.textContent = '계속';
+    }
+  });
+
+  pomoResetBtn.addEventListener('click', function(){
+    clearInterval(pomoIntervalId);
+    pomoRunning = false;
+    pomoStartBtn.textContent = '시작';
+    pomoResetToFocus();
+  });
+
+  pomoSkipBtn.addEventListener('click', function(){
+    pomoAdvancePhase();
+  });
+
+  function syncPomoSheetUI(){
+    pomoFocusInput.value = state.pomo.focusMin;
+    pomoShortInput.value = state.pomo.shortMin;
+    pomoLongInput.value = state.pomo.longMin;
+    pomoSessionsInput.value = state.pomo.sessionsUntilLong;
+  }
+
+  function openPomoSheet(){
+    syncPomoSheetUI();
+    overlay.classList.add('open');
+    pomoSheet.classList.add('open');
+  }
+
+  pomoSaveBtn.addEventListener('click', function(){
+    state.pomo = {
+      focusMin: Math.max(1, parseInt(pomoFocusInput.value, 10) || 25),
+      shortMin: Math.max(1, parseInt(pomoShortInput.value, 10) || 5),
+      longMin: Math.max(1, parseInt(pomoLongInput.value, 10) || 15),
+      sessionsUntilLong: Math.max(1, parseInt(pomoSessionsInput.value, 10) || 4)
+    };
+    saveStateToHash(state);
+    if(!pomoRunning){
+      pomoRemaining = pomoPhaseDuration(pomoPhase);
+      renderPomoDisplay();
+    }
+    if(pomoCompleted > state.pomo.sessionsUntilLong) pomoCompleted = state.pomo.sessionsUntilLong;
+    renderPomoDots();
+    closeAllSheets();
+  });
+
+  pomoCancelBtn.addEventListener('click', closeAllSheets);
+
+  function openSheet(){
+    inputTitle.value = state.title;
+    inputDate.value = state.date;
+    inputTime.value = state.time;
+    applyTheme(state.theme);
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+  }
+  function openClockSheet(){
+    syncClockSheetUI();
+    overlay.classList.add('open');
+    clockSheet.classList.add('open');
+  }
+  function closeAllSheets(){
+    overlay.classList.remove('open');
+    sheet.classList.remove('open');
+    clockSheet.classList.remove('open');
+    pomoSheet.classList.remove('open');
+  }
+
+  settingsBtn.addEventListener('click', function(){
+    if(state.mode === 'clock') openClockSheet();
+    else if(state.mode === 'pomodoro') openPomoSheet();
+    else openSheet();
+  });
+  overlay.addEventListener('click', closeAllSheets);
+  cancelBtn.addEventListener('click', closeAllSheets);
+  clockSheetCloseBtn.addEventListener('click', closeAllSheets);
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeAllSheets();
+  });
+
+  saveBtn.addEventListener('click', function(){
+    var title = inputTitle.value.trim() || '디데이';
+    var date = inputDate.value || state.date;
+    var time = inputTime.value || '00:00';
+    state.title = title;
+    state.date = date;
+    state.time = time;
+    saveStateToHash(state);
+    renderStatic();
+    ddayTick();
+    closeAllSheets();
+  });
+
+  buildSwatches();
+  applyTheme(state.theme);
+  renderStatic();
+  ddayTick();
+  syncClockSheetUI();
+  updateClock();
+  setTimerDisplay(0);
+  renderSW(0);
+  pomoResetToFocus();
+  setMode(state.mode || 'dday');
+
+  setInterval(function(){
+    ddayTick();
+    updateClock();
+  }, 1000);
+})();
+</script>
+</body>
+</html>
