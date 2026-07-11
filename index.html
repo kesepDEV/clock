@@ -646,6 +646,7 @@
         </div>
       </div>
       <div class="cal-events" id="calEvents"></div>
+      <button class="chip" id="calRefreshBtn" style="display:none">↻ 일정 새로고침</button>
     </section>
 
     <!-- Timer -->
@@ -897,6 +898,7 @@
   var gcalConnectedUI   = document.getElementById('gcalConnectedUI');
   var gcalDisconnectBtn = document.getElementById('gcalDisconnectBtn');
   var calEventsEl       = document.getElementById('calEvents');
+  var calRefreshBtn     = document.getElementById('calRefreshBtn');
 
   // Weather
   var weatherCard      = document.getElementById('weatherCard');
@@ -1199,7 +1201,13 @@
     var connected = !!gcalToken;
     gcalSetupUI.style.display     = connected ? 'none' : '';
     gcalConnectedUI.style.display = connected ? ''     : 'none';
+    calRefreshBtn.style.display   = connected ? ''     : 'none';
   }
+
+  calRefreshBtn.addEventListener('click', function(){
+    calEventsEl.innerHTML = '<div class="cal-empty">일정 불러오는 중…</div>';
+    fetchCalEvents();
+  });
 
   function formatCalTime(event){
     if(event.start && event.start.dateTime){
@@ -1249,24 +1257,36 @@
 
   function fetchCalEvents(){
     if(!gcalToken) return;
-    var now = new Date().toISOString();
-    // 오늘부터 7일 후까지 일정 가져오기
+    // timeMin = 오늘 자정 (이미 시작된 오늘 일정도 포함)
+    var todayStart = new Date(); todayStart.setHours(0,0,0,0);
     var end = new Date(); end.setDate(end.getDate() + 7); end.setHours(23,59,59,999);
     var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
-      '?timeMin=' + encodeURIComponent(now) +
+      '?timeMin=' + encodeURIComponent(todayStart.toISOString()) +
       '&timeMax=' + encodeURIComponent(end.toISOString()) +
-      '&maxResults=5&singleEvents=true&orderBy=startTime';
+      '&maxResults=10&singleEvents=true&orderBy=startTime';
+    console.log('[GCal] fetching:', url);
     fetch(url, { headers:{ Authorization:'Bearer ' + gcalToken } })
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if(data.error && data.error.code === 401){
-          gcalToken = null; updateGCalSheetUI(); calEventsEl.innerHTML = '';
-          if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
+        console.log('[GCal] response:', JSON.stringify(data).slice(0, 400));
+        if(data.error){
+          console.warn('[GCal] API error:', data.error.code, data.error.message);
+          if(data.error.code === 401){
+            gcalToken = null; updateGCalSheetUI(); calEventsEl.innerHTML = '';
+            if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
+          } else {
+            calEventsEl.innerHTML = '<div class="cal-empty">오류: ' + (data.error.message || data.error.code) + '</div>';
+          }
           return;
         }
-        renderCalEvents(data.items || []);
+        var items = data.items || [];
+        console.log('[GCal] items count:', items.length, items.map(function(e){ return e.summary; }));
+        renderCalEvents(items);
       })
-      .catch(function(){});
+      .catch(function(err){
+        console.error('[GCal] fetch failed:', err);
+        calEventsEl.innerHTML = '<div class="cal-empty">네트워크 오류 — 콘솔 확인</div>';
+      });
   }
 
   /* ---------- Weather ---------- */
@@ -1334,10 +1354,16 @@
   }
 
   function onGCalToken(tokenResponse){
-    if(tokenResponse.error){ return; }
+    console.log('[GCal] token response:', tokenResponse.error || 'OK');
+    if(tokenResponse.error){ 
+      console.warn('[GCal] token error:', tokenResponse.error);
+      calEventsEl.innerHTML = '<div class="cal-empty">인증 오류: ' + tokenResponse.error + '</div>';
+      return; 
+    }
     gcalToken = tokenResponse.access_token;
-    fetchCalEvents();
     updateGCalSheetUI();
+    calEventsEl.innerHTML = '<div class="cal-empty">일정 불러오는 중…</div>';
+    fetchCalEvents();
     // refresh 55min later (tokens expire in 1h)
     if(gcalRefreshTimer) clearTimeout(gcalRefreshTimer);
     gcalRefreshTimer = setTimeout(function(){
