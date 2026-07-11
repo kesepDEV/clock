@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Innovation Clock</title>
+<title>D-Day · 시계 · 타이머 · 스톱워치</title>
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
@@ -470,37 +470,75 @@
 
   /* ---------- Google Calendar events ---------- */
   .cal-events{
-    display:flex; flex-direction:column; gap:7px;
-    width:min(340px, 90vw);
+    display:flex; flex-direction:column; gap:9px;
+    width:min(480px, 92vw);
   }
   .cal-events:empty{ display:none; }
   .cal-event{
     background:var(--glass-bg);
     border:1px solid var(--glass-border);
-    border-radius:16px;
+    border-radius:20px;
     backdrop-filter:blur(20px) saturate(160%);
     -webkit-backdrop-filter:blur(20px) saturate(160%);
-    padding:10px 14px;
-    display:flex; align-items:center; gap:11px;
+    padding:14px 18px;
+    display:flex; align-items:center; gap:14px;
     text-align:left;
   }
   .cal-dot{
-    width:8px; height:8px; border-radius:50%;
+    width:10px; height:10px; border-radius:50%;
     background:var(--accent); flex-shrink:0;
   }
   .cal-info{ flex:1; min-width:0; }
   .cal-title{
-    font-size:0.86rem; font-weight:600;
+    font-size:1rem; font-weight:600;
     color:var(--text-primary);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .cal-time{
-    font-size:0.76rem; color:var(--text-secondary);
-    margin-top:2px;
+    font-size:0.84rem; color:var(--text-secondary);
+    margin-top:3px;
   }
   .cal-empty{
-    font-size:0.8rem; color:var(--text-secondary);
-    text-align:center; padding:8px 0;
+    font-size:0.88rem; color:var(--text-secondary);
+    text-align:center; padding:10px 0;
+  }
+
+  /* ---------- Weather widget ---------- */
+  .weather-card{
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    border-radius:24px;
+    backdrop-filter:blur(34px) saturate(180%);
+    -webkit-backdrop-filter:blur(34px) saturate(180%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 12px 32px rgba(0,0,0,0.35);
+    padding:18px 28px;
+    display:flex; align-items:center; gap:20px;
+    width:min(480px, 92vw);
+    text-align:left;
+  }
+  .weather-icon{ font-size:2.6rem; line-height:1; flex-shrink:0; }
+  .weather-main{ flex:1; min-width:0; }
+  .weather-temp{
+    font-size:2rem; font-weight:700; color:#fff;
+    letter-spacing:-0.02em; line-height:1;
+  }
+  .weather-desc{
+    font-size:0.88rem; color:var(--text-secondary);
+    margin-top:3px; font-weight:500;
+  }
+  .weather-extra{
+    display:flex; gap:12px; margin-top:6px; flex-wrap:wrap;
+  }
+  .weather-badge{
+    font-size:0.78rem; color:var(--text-secondary);
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:999px; padding:3px 10px;
+    white-space:nowrap;
+  }
+  .weather-location{
+    font-size:0.78rem; color:rgba(245,245,247,0.38);
+    margin-top:2px;
   }
 
   /* ---------- Cal sheet section ---------- */
@@ -597,6 +635,15 @@
       <div class="clock-face">
         <div class="clock-time" id="clockTime">00:00:00</div>
         <div class="clock-date" id="clockDate">2026년 7월 10일 (금)</div>
+      </div>
+      <div class="weather-card" id="weatherCard" style="display:none">
+        <div class="weather-icon" id="weatherIcon">☀️</div>
+        <div class="weather-main">
+          <div class="weather-temp" id="weatherTemp">--°</div>
+          <div class="weather-desc" id="weatherDesc">불러오는 중…</div>
+          <div class="weather-extra" id="weatherExtra"></div>
+          <div class="weather-location">📍 가락1동, 송파구</div>
+        </div>
       </div>
       <div class="cal-events" id="calEvents"></div>
     </section>
@@ -758,6 +805,20 @@
     </div>
   </div>
 
+  <!-- 날씨 -->
+  <div class="cal-section-title">날씨 (가락1동)</div>
+  <div class="field">
+    <span>OpenWeatherMap API 키</span>
+    <input type="text" id="weatherApiKeyInput" placeholder="API 키를 입력하세요" autocomplete="off" spellcheck="false"/>
+  </div>
+  <div style="display:flex; gap:8px; margin-top:4px;">
+    <button class="gcal-connect-btn" id="weatherSaveBtn" style="margin-top:0">날씨 저장 &amp; 불러오기</button>
+  </div>
+  <p class="gcal-help">
+    <a href="https://openweathermap.org/api" target="_blank" rel="noopener">openweathermap.org</a>에서
+    무료 API 키 발급 후 입력. 10분마다 자동 갱신.
+  </p>
+
   <div class="sheet-actions">
     <button id="clockSheetCloseBtn" style="flex:1">닫기</button>
   </div>
@@ -837,6 +898,15 @@
   var gcalDisconnectBtn = document.getElementById('gcalDisconnectBtn');
   var calEventsEl       = document.getElementById('calEvents');
 
+  // Weather
+  var weatherCard      = document.getElementById('weatherCard');
+  var weatherIcon      = document.getElementById('weatherIcon');
+  var weatherTemp      = document.getElementById('weatherTemp');
+  var weatherDesc      = document.getElementById('weatherDesc');
+  var weatherExtra     = document.getElementById('weatherExtra');
+  var weatherApiKeyInput = document.getElementById('weatherApiKeyInput');
+  var weatherSaveBtn   = document.getElementById('weatherSaveBtn');
+
   // Timer
   var timerLabel = document.getElementById('timerLabel');
   var timerH = document.getElementById('timerH');
@@ -915,6 +985,7 @@
         if(!obj.pomo.longMin) obj.pomo.longMin = 15;
         if(!obj.pomo.sessionsUntilLong) obj.pomo.sessionsUntilLong = 4;
         if(typeof obj.gcalClientId !== 'string') obj.gcalClientId = '';
+        if(typeof obj.weatherApiKey !== 'string') obj.weatherApiKey = '';
         return obj;
       }
     }catch(e){}
@@ -940,7 +1011,8 @@
       showDate: true,
       showWeekday: true,
       pomo: { focusMin: 25, shortMin: 5, longMin: 15, sessionsUntilLong: 4 },
-      gcalClientId: ''
+      gcalClientId: '',
+      weatherApiKey: ''
     };
   }
 
@@ -1083,18 +1155,8 @@
     }
   }
 
-  function syncClockSheetUI(){
-    var segBtns = clockFormatSeg.querySelectorAll('button');
-    for(var i=0;i<segBtns.length;i++){
-      segBtns[i].classList.toggle('active', segBtns[i].dataset.val === (state.clock24 ? '24' : '12'));
-    }
-    optSeconds.checked = state.showSeconds;
-    optDate.checked = state.showDate;
-    optWeekday.checked = state.showWeekday;
-    optWeekday.disabled = !state.showDate;
-    // gcal
-    gcalClientIdInput.value = state.gcalClientId || '';
-    gcalConnectBtn.disabled = !state.gcalClientId;
+  function syncClockSheetUIAndGcal(){
+    syncClockSheetUI();
     updateGCalSheetUI();
   }
 
@@ -1149,20 +1211,37 @@
     return '종일';
   }
 
+  function daysUntil(event){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var evDate;
+    if(event.start && event.start.dateTime) evDate = new Date(event.start.dateTime);
+    else if(event.start && event.start.date) evDate = new Date(event.start.date + 'T00:00:00');
+    else return 0;
+    evDate.setHours(0,0,0,0);
+    return Math.round((evDate - today) / 86400000);
+  }
+
+  function calDateLabel(event){
+    var d = daysUntil(event);
+    if(d === 0) return '오늘 · ' + formatCalTime(event);
+    if(d === 1) return '내일 · ' + formatCalTime(event);
+    return d + '일 후 · ' + formatCalTime(event);
+  }
+
   function renderCalEvents(items){
     calEventsEl.innerHTML = '';
     if(!items || items.length === 0){
-      calEventsEl.innerHTML = '<div class="cal-empty">오늘 일정이 없어요</div>';
+      calEventsEl.innerHTML = '<div class="cal-empty">다가오는 일정이 없어요</div>';
       return;
     }
-    items.slice(0, 3).forEach(function(ev){
+    items.slice(0, 5).forEach(function(ev){
       var div = document.createElement('div');
       div.className = 'cal-event';
       div.innerHTML =
         '<div class="cal-dot"></div>' +
         '<div class="cal-info">' +
           '<div class="cal-title">' + (ev.summary || '(제목 없음)') + '</div>' +
-          '<div class="cal-time">' + formatCalTime(ev) + '</div>' +
+          '<div class="cal-time">' + calDateLabel(ev) + '</div>' +
         '</div>';
       calEventsEl.appendChild(div);
     });
@@ -1171,7 +1250,8 @@
   function fetchCalEvents(){
     if(!gcalToken) return;
     var now = new Date().toISOString();
-    var end = new Date(); end.setHours(23,59,59,999);
+    // 오늘부터 7일 후까지 일정 가져오기
+    var end = new Date(); end.setDate(end.getDate() + 7); end.setHours(23,59,59,999);
     var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
       '?timeMin=' + encodeURIComponent(now) +
       '&timeMax=' + encodeURIComponent(end.toISOString()) +
@@ -1181,13 +1261,76 @@
       .then(function(data){
         if(data.error && data.error.code === 401){
           gcalToken = null; updateGCalSheetUI(); calEventsEl.innerHTML = '';
-          // try silent re-auth
           if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
           return;
         }
         renderCalEvents(data.items || []);
       })
       .catch(function(){});
+  }
+
+  /* ---------- Weather ---------- */
+  var weatherPollTimer = null;
+
+  var OWM_ICONS = {
+    '01d':'☀️','01n':'🌙','02d':'⛅','02n':'⛅',
+    '03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️',
+    '09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌧️',
+    '11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️',
+    '50d':'🌫️','50n':'🌫️'
+  };
+
+  function fetchWeather(){
+    var key = state.weatherApiKey;
+    if(!key){ weatherCard.style.display = 'none'; return; }
+    // 가락1동, 송파구 좌표
+    var lat = 37.4928, lon = 127.1176;
+    var url = 'https://api.openweathermap.org/data/2.5/weather' +
+      '?lat=' + lat + '&lon=' + lon +
+      '&units=metric&lang=kr&appid=' + key;
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d.cod !== 200){ weatherCard.style.display='none'; return; }
+        weatherCard.style.display = '';
+        var icon = OWM_ICONS[d.weather[0].icon] || '🌡️';
+        weatherIcon.textContent = icon;
+        weatherTemp.textContent = Math.round(d.main.temp) + '°';
+        weatherDesc.textContent = d.weather[0].description;
+        weatherExtra.innerHTML =
+          '<span class="weather-badge">체감 ' + Math.round(d.main.feels_like) + '°</span>' +
+          '<span class="weather-badge">습도 ' + d.main.humidity + '%</span>' +
+          '<span class="weather-badge">바람 ' + Math.round(d.wind.speed * 3.6) + 'km/h</span>';
+      })
+      .catch(function(){ weatherCard.style.display='none'; });
+  }
+
+  function initWeather(){
+    if(!state.weatherApiKey){ weatherCard.style.display='none'; return; }
+    fetchWeather();
+    if(weatherPollTimer) clearInterval(weatherPollTimer);
+    weatherPollTimer = setInterval(fetchWeather, 10 * 60 * 1000);
+  }
+
+  weatherSaveBtn.addEventListener('click', function(){
+    var key = weatherApiKeyInput.value.trim();
+    state.weatherApiKey = key;
+    saveStateToHash(state);
+    initWeather();
+  });
+
+  function syncClockSheetUI(){
+    var segBtns = clockFormatSeg.querySelectorAll('button');
+    for(var i=0;i<segBtns.length;i++){
+      segBtns[i].classList.toggle('active', segBtns[i].dataset.val === (state.clock24 ? '24' : '12'));
+    }
+    optSeconds.checked = state.showSeconds;
+    optDate.checked = state.showDate;
+    optWeekday.checked = state.showWeekday;
+    optWeekday.disabled = !state.showDate;
+    weatherApiKeyInput.value = state.weatherApiKey || '';
+    if(state.gcalClientId) gcalClientIdInput.value = state.gcalClientId;
+    gcalConnectBtn.disabled = !gcalClientIdInput.value.trim();
   }
 
   function onGCalToken(tokenResponse){
@@ -1669,7 +1812,7 @@
     sheet.classList.add('open');
   }
   function openClockSheet(){
-    syncClockSheetUI();
+    syncClockSheetUIAndGcal();
     overlay.classList.add('open');
     clockSheet.classList.add('open');
   }
@@ -1716,6 +1859,7 @@
   pomoResetToFocus();
   setMode(state.mode || 'dday');
   initGCalIfNeeded();
+  initWeather();
 
   setInterval(function(){
     ddayTick();
