@@ -468,77 +468,89 @@
     pointer-events:none;
   }
 
+  /* ---------- Clock info row (weather + calendar side by side) ---------- */
+  .clock-info-row{
+    display:flex; gap:14px; align-items:flex-start;
+    width:min(760px, 92vw); justify-content:center;
+  }
+
+  .cal-panel{
+    display:flex; flex-direction:column; align-items:center;
+    flex:1; min-width:0;
+  }
+
   /* ---------- Google Calendar events ---------- */
   .cal-events{
-    display:flex; flex-direction:column; gap:9px;
-    width:min(480px, 92vw);
+    display:flex; flex-direction:column; gap:7px;
+    width:100%;
   }
   .cal-events:empty{ display:none; }
   .cal-event{
     background:var(--glass-bg);
     border:1px solid var(--glass-border);
-    border-radius:20px;
+    border-radius:16px;
     backdrop-filter:blur(20px) saturate(160%);
     -webkit-backdrop-filter:blur(20px) saturate(160%);
-    padding:14px 18px;
-    display:flex; align-items:center; gap:14px;
+    padding:11px 14px;
+    display:flex; align-items:center; gap:11px;
     text-align:left;
   }
   .cal-dot{
-    width:10px; height:10px; border-radius:50%;
+    width:8px; height:8px; border-radius:50%;
     background:var(--accent); flex-shrink:0;
   }
   .cal-info{ flex:1; min-width:0; }
   .cal-title{
-    font-size:1rem; font-weight:600;
+    font-size:0.88rem; font-weight:600;
     color:var(--text-primary);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .cal-time{
-    font-size:0.84rem; color:var(--text-secondary);
-    margin-top:3px;
+    font-size:0.76rem; color:var(--text-secondary);
+    margin-top:2px;
   }
   .cal-empty{
-    font-size:0.88rem; color:var(--text-secondary);
-    text-align:center; padding:10px 0;
+    font-size:0.82rem; color:var(--text-secondary);
+    text-align:center; padding:8px 0;
   }
 
   /* ---------- Weather widget ---------- */
   .weather-card{
     background:var(--glass-bg);
     border:1px solid var(--glass-border);
-    border-radius:24px;
+    border-radius:20px;
     backdrop-filter:blur(34px) saturate(180%);
     -webkit-backdrop-filter:blur(34px) saturate(180%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 12px 32px rgba(0,0,0,0.35);
-    padding:18px 28px;
-    display:flex; align-items:center; gap:20px;
-    width:min(480px, 92vw);
+    padding:14px 18px;
+    display:flex; align-items:center; gap:12px;
+    flex-shrink:0; width:180px;
     text-align:left;
   }
-  .weather-icon{ font-size:2.6rem; line-height:1; flex-shrink:0; }
+  .weather-icon{ font-size:2rem; line-height:1; flex-shrink:0; }
   .weather-main{ flex:1; min-width:0; }
   .weather-temp{
-    font-size:2rem; font-weight:700; color:#fff;
+    font-size:1.6rem; font-weight:700; color:#fff;
     letter-spacing:-0.02em; line-height:1;
   }
   .weather-desc{
-    font-size:0.88rem; color:var(--text-secondary);
-    margin-top:3px; font-weight:500;
+    font-size:0.78rem; color:var(--text-secondary);
+    margin-top:2px; font-weight:500;
   }
   .weather-extra{
-    display:flex; gap:12px; margin-top:6px; flex-wrap:wrap;
+    display:flex; flex-direction:column; gap:3px; margin-top:5px;
   }
   .weather-badge{
-    font-size:0.78rem; color:var(--text-secondary);
-    background:rgba(255,255,255,0.07);
-    border:1px solid rgba(255,255,255,0.1);
-    border-radius:999px; padding:3px 10px;
-    white-space:nowrap;
+    font-size:0.72rem; color:var(--text-secondary);
   }
   .weather-location{
-    font-size:0.78rem; color:rgba(245,245,247,0.38);
-    margin-top:2px;
+    font-size:0.68rem; color:rgba(245,245,247,0.32);
+    margin-top:3px;
+  }
+
+  @media (max-width:520px){
+    .clock-info-row{ flex-direction:column; align-items:center; }
+    .weather-card{ width:100%; }
   }
 
   /* ---------- Cal sheet section ---------- */
@@ -636,17 +648,21 @@
         <div class="clock-time" id="clockTime">00:00:00</div>
         <div class="clock-date" id="clockDate">2026년 7월 10일 (금)</div>
       </div>
-      <div class="weather-card" id="weatherCard" style="display:none">
-        <div class="weather-icon" id="weatherIcon">☀️</div>
-        <div class="weather-main">
-          <div class="weather-temp" id="weatherTemp">--°</div>
-          <div class="weather-desc" id="weatherDesc">불러오는 중…</div>
-          <div class="weather-extra" id="weatherExtra"></div>
-          <div class="weather-location">📍 가락1동, 송파구</div>
+      <div class="clock-info-row">
+        <div class="weather-card" id="weatherCard" style="display:none">
+          <div class="weather-icon" id="weatherIcon">☀️</div>
+          <div class="weather-main">
+            <div class="weather-temp" id="weatherTemp">--°</div>
+            <div class="weather-desc" id="weatherDesc">불러오는 중…</div>
+            <div class="weather-extra" id="weatherExtra"></div>
+            <div class="weather-location">📍 가락1동, 송파구</div>
+          </div>
+        </div>
+        <div class="cal-panel" id="calPanel">
+          <div class="cal-events" id="calEvents"></div>
+          <button class="chip" id="calRefreshBtn" style="display:none;margin-top:6px">↻ 새로고침</button>
         </div>
       </div>
-      <div class="cal-events" id="calEvents"></div>
-      <button class="chip" id="calRefreshBtn" style="display:none">↻ 일정 새로고침</button>
     </section>
 
     <!-- Timer -->
@@ -1257,13 +1273,12 @@
 
   function fetchCalEvents(){
     if(!gcalToken) return;
-    // timeMin = 오늘 자정 (이미 시작된 오늘 일정도 포함)
     var todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    var end = new Date(); end.setDate(end.getDate() + 7); end.setHours(23,59,59,999);
+    var end = new Date(); end.setDate(end.getDate() + 2); end.setHours(23,59,59,999);
     var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
       '?timeMin=' + encodeURIComponent(todayStart.toISOString()) +
       '&timeMax=' + encodeURIComponent(end.toISOString()) +
-      '&maxResults=10&singleEvents=true&orderBy=startTime';
+      '&maxResults=5&singleEvents=true&orderBy=startTime';
     console.log('[GCal] fetching:', url);
     fetch(url, { headers:{ Authorization:'Bearer ' + gcalToken } })
       .then(function(r){ return r.json(); })
@@ -1279,13 +1294,13 @@
           }
           return;
         }
-        var items = data.items || [];
+        var items = (data.items || []).filter(function(ev){ return daysUntil(ev) <= 2; });
         console.log('[GCal] items count:', items.length, items.map(function(e){ return e.summary; }));
         renderCalEvents(items);
       })
       .catch(function(err){
         console.error('[GCal] fetch failed:', err);
-        calEventsEl.innerHTML = '<div class="cal-empty">네트워크 오류 — 콘솔 확인</div>';
+        calEventsEl.innerHTML = '<div class="cal-empty">네트워크 오류</div>';
       });
   }
 
