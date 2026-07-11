@@ -75,8 +75,9 @@
   .app{
     position:relative; z-index:1;
     height:100vh; width:100vw;
-    display:flex; flex-direction:column;
+    display:flex;
     align-items:center;
+    justify-content:center;
     padding:24px;
     opacity:0; transform:scale(0.96);
     animation:appear 0.7s cubic-bezier(.2,.8,.2,1) forwards;
@@ -84,11 +85,14 @@
   @keyframes appear{ to{ opacity:1; transform:scale(1); } }
 
   .topbar{
-    position:relative;
-    width:100%; max-width:920px;
+    position:absolute;
+    top:max(4px, env(safe-area-inset-top));
+    left:50%;
+    transform:translateX(-50%);
+    width:calc(100% - 48px);
+    max-width:920px;
     display:flex; align-items:center; justify-content:center;
-    margin-top:max(4px, env(safe-area-inset-top));
-    flex:0 0 auto;
+    z-index:3;
   }
 
   .tabs{
@@ -135,7 +139,7 @@
   #appRoot[data-mode="stopwatch"] .settings-btn{ opacity:0; pointer-events:none; }
 
   .views{
-    flex:1 1 auto; width:100%;
+    width:100%; height:100%;
     display:flex; align-items:center; justify-content:center;
   }
   .view{
@@ -233,8 +237,10 @@
     -webkit-backdrop-filter:blur(40px) saturate(180%);
     box-shadow:0 -10px 60px rgba(0,0,0,0.5);
     padding:14px 26px max(28px, env(safe-area-inset-bottom));
+    max-height:88vh; overflow-y:auto; scrollbar-width:none;
     transition:transform .42s cubic-bezier(.2,.9,.2,1);
   }
+  .sheet::-webkit-scrollbar{ display:none; }
   .sheet.open{ transform:translate(-50%, 0); }
 
   .sheet-handle{
@@ -461,6 +467,90 @@
     color:rgba(245,245,247,0.32);
     pointer-events:none;
   }
+
+  /* ---------- Google Calendar events ---------- */
+  .cal-events{
+    display:flex; flex-direction:column; gap:7px;
+    width:min(340px, 90vw);
+  }
+  .cal-events:empty{ display:none; }
+  .cal-event{
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    border-radius:16px;
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    padding:10px 14px;
+    display:flex; align-items:center; gap:11px;
+    text-align:left;
+  }
+  .cal-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--accent); flex-shrink:0;
+  }
+  .cal-info{ flex:1; min-width:0; }
+  .cal-title{
+    font-size:0.86rem; font-weight:600;
+    color:var(--text-primary);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cal-time{
+    font-size:0.76rem; color:var(--text-secondary);
+    margin-top:2px;
+  }
+  .cal-empty{
+    font-size:0.8rem; color:var(--text-secondary);
+    text-align:center; padding:8px 0;
+  }
+
+  /* ---------- Cal sheet section ---------- */
+  .cal-section-title{
+    font-size:0.8rem; font-weight:600; color:var(--text-secondary);
+    letter-spacing:0.01em; margin:16px 0 10px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .cal-section-title::before{
+    content:''; display:block; height:1px; flex:1;
+    background:rgba(255,255,255,0.1);
+  }
+  .cal-section-title::after{
+    content:''; display:block; height:1px; flex:1;
+    background:rgba(255,255,255,0.1);
+  }
+  .gcal-status{
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(48,209,88,0.1);
+    border:1px solid rgba(48,209,88,0.25);
+    border-radius:12px; padding:10px 14px; margin-bottom:10px;
+  }
+  .gcal-status-text{
+    font-size:0.85rem; font-weight:600; color:var(--accent-done);
+    display:flex; align-items:center; gap:6px;
+  }
+  .gcal-disconnect{
+    background:rgba(255,55,55,0.15); border:1px solid rgba(255,55,55,0.25);
+    color:#FF6B6B; border-radius:8px; padding:5px 10px;
+    font-size:0.78rem; font-weight:600; font-family:inherit;
+    cursor:pointer; transition:opacity .2s;
+  }
+  .gcal-disconnect:hover{ opacity:0.8; }
+  .gcal-help{
+    font-size:0.74rem; color:var(--text-secondary);
+    line-height:1.6; margin-top:8px;
+  }
+  .gcal-help a{ color:var(--accent); text-decoration:none; }
+  .gcal-connect-btn{
+    width:100%; margin-top:8px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid var(--glass-border);
+    color:var(--text-primary);
+    padding:11px; border-radius:12px;
+    font-size:0.9rem; font-weight:600; font-family:inherit;
+    cursor:pointer; transition:background .2s, opacity .2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .gcal-connect-btn:hover:not(:disabled){ background:rgba(255,255,255,0.12); }
+  .gcal-connect-btn:disabled{ opacity:0.35; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -508,6 +598,7 @@
         <div class="clock-time" id="clockTime">00:00:00</div>
         <div class="clock-date" id="clockDate">2026년 7월 10일 (금)</div>
       </div>
+      <div class="cal-events" id="calEvents"></div>
     </section>
 
     <!-- Timer -->
@@ -636,6 +727,37 @@
       </label>
     </div>
   </div>
+  <!-- Google Calendar -->
+  <div class="cal-section-title">Google 캘린더</div>
+
+  <!-- 미연결 상태 -->
+  <div id="gcalSetupUI">
+    <div class="field">
+      <span>OAuth 2.0 클라이언트 ID</span>
+      <input type="text" id="gcalClientIdInput" placeholder="xxxxxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false"/>
+    </div>
+    <button class="gcal-connect-btn" id="gcalConnectBtn" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Google 연결
+    </button>
+    <p class="gcal-help">
+      <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>에서
+      OAuth 2.0 클라이언트 ID를 발급받아 입력하세요.<br>
+      승인된 JavaScript 출처에 이 사이트 주소를 추가해야 합니다.
+    </p>
+  </div>
+
+  <!-- 연결됨 상태 -->
+  <div id="gcalConnectedUI" style="display:none">
+    <div class="gcal-status">
+      <span class="gcal-status-text">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Google 캘린더 연결됨
+      </span>
+      <button class="gcal-disconnect" id="gcalDisconnectBtn">연결 해제</button>
+    </div>
+  </div>
+
   <div class="sheet-actions">
     <button id="clockSheetCloseBtn" style="flex:1">닫기</button>
   </div>
@@ -706,6 +828,14 @@
   var optDate = document.getElementById('optDate');
   var optWeekday = document.getElementById('optWeekday');
   var clockSheetCloseBtn = document.getElementById('clockSheetCloseBtn');
+
+  // Google Calendar UI elements
+  var gcalClientIdInput = document.getElementById('gcalClientIdInput');
+  var gcalConnectBtn    = document.getElementById('gcalConnectBtn');
+  var gcalSetupUI       = document.getElementById('gcalSetupUI');
+  var gcalConnectedUI   = document.getElementById('gcalConnectedUI');
+  var gcalDisconnectBtn = document.getElementById('gcalDisconnectBtn');
+  var calEventsEl       = document.getElementById('calEvents');
 
   // Timer
   var timerLabel = document.getElementById('timerLabel');
@@ -784,6 +914,7 @@
         if(!obj.pomo.shortMin) obj.pomo.shortMin = 5;
         if(!obj.pomo.longMin) obj.pomo.longMin = 15;
         if(!obj.pomo.sessionsUntilLong) obj.pomo.sessionsUntilLong = 4;
+        if(typeof obj.gcalClientId !== 'string') obj.gcalClientId = '';
         return obj;
       }
     }catch(e){}
@@ -808,7 +939,8 @@
       showSeconds: true,
       showDate: true,
       showWeekday: true,
-      pomo: { focusMin: 25, shortMin: 5, longMin: 15, sessionsUntilLong: 4 }
+      pomo: { focusMin: 25, shortMin: 5, longMin: 15, sessionsUntilLong: 4 },
+      gcalClientId: ''
     };
   }
 
@@ -960,6 +1092,10 @@
     optDate.checked = state.showDate;
     optWeekday.checked = state.showWeekday;
     optWeekday.disabled = !state.showDate;
+    // gcal
+    gcalClientIdInput.value = state.gcalClientId || '';
+    gcalConnectBtn.disabled = !state.gcalClientId;
+    updateGCalSheetUI();
   }
 
   clockFormatSeg.addEventListener('click', function(e){
@@ -988,6 +1124,172 @@
     state.showWeekday = optWeekday.checked;
     saveStateToHash(state);
     updateClock();
+  });
+
+  /* ---------- Google Calendar ---------- */
+  var gcalToken        = null;
+  var gcalTokenClient  = null;
+  var gcalRefreshTimer = null;
+  var gcalPollTimer    = null;
+  var gcalGsiLoaded    = false;
+
+  function updateGCalSheetUI(){
+    var connected = !!gcalToken;
+    gcalSetupUI.style.display     = connected ? 'none' : '';
+    gcalConnectedUI.style.display = connected ? ''     : 'none';
+  }
+
+  function formatCalTime(event){
+    if(event.start && event.start.dateTime){
+      var d = new Date(event.start.dateTime);
+      var h = d.getHours(), m = d.getMinutes(), suffix = '';
+      if(!state.clock24){ suffix = h >= 12 ? ' PM' : ' AM'; h = h % 12 || 12; }
+      return pad(h) + ':' + pad(m) + suffix;
+    }
+    return '종일';
+  }
+
+  function renderCalEvents(items){
+    calEventsEl.innerHTML = '';
+    if(!items || items.length === 0){
+      calEventsEl.innerHTML = '<div class="cal-empty">오늘 일정이 없어요</div>';
+      return;
+    }
+    items.slice(0, 3).forEach(function(ev){
+      var div = document.createElement('div');
+      div.className = 'cal-event';
+      div.innerHTML =
+        '<div class="cal-dot"></div>' +
+        '<div class="cal-info">' +
+          '<div class="cal-title">' + (ev.summary || '(제목 없음)') + '</div>' +
+          '<div class="cal-time">' + formatCalTime(ev) + '</div>' +
+        '</div>';
+      calEventsEl.appendChild(div);
+    });
+  }
+
+  function fetchCalEvents(){
+    if(!gcalToken) return;
+    var now = new Date().toISOString();
+    var end = new Date(); end.setHours(23,59,59,999);
+    var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
+      '?timeMin=' + encodeURIComponent(now) +
+      '&timeMax=' + encodeURIComponent(end.toISOString()) +
+      '&maxResults=5&singleEvents=true&orderBy=startTime';
+    fetch(url, { headers:{ Authorization:'Bearer ' + gcalToken } })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.error && data.error.code === 401){
+          gcalToken = null; updateGCalSheetUI(); calEventsEl.innerHTML = '';
+          // try silent re-auth
+          if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
+          return;
+        }
+        renderCalEvents(data.items || []);
+      })
+      .catch(function(){});
+  }
+
+  function onGCalToken(tokenResponse){
+    if(tokenResponse.error){ return; }
+    gcalToken = tokenResponse.access_token;
+    fetchCalEvents();
+    updateGCalSheetUI();
+    // refresh 55min later (tokens expire in 1h)
+    if(gcalRefreshTimer) clearTimeout(gcalRefreshTimer);
+    gcalRefreshTimer = setTimeout(function(){
+      if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
+    }, 55 * 60 * 1000);
+    // poll every 5 min
+    if(!gcalPollTimer) gcalPollTimer = setInterval(fetchCalEvents, 5 * 60 * 1000);
+  }
+
+  function setupTokenClient(){
+    if(!window.google || !window.google.accounts || !state.gcalClientId) return;
+    gcalTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: state.gcalClientId,
+      scope: 'https://www.googleapis.com/auth/calendar.readonly',
+      callback: onGCalToken
+    });
+    // silent auth (no prompt) — works if user already granted before
+    gcalTokenClient.requestAccessToken({ prompt:'' });
+  }
+
+  function loadGsiAndSetup(){
+    if(gcalGsiLoaded){ setupTokenClient(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = function(){ gcalGsiLoaded = true; setupTokenClient(); };
+    document.head.appendChild(s);
+  }
+
+  function initGCalIfNeeded(){
+    if(state.gcalClientId) loadGsiAndSetup();
+  }
+
+  // Client ID input → save & enable connect button
+  gcalClientIdInput.addEventListener('input', function(){
+    gcalConnectBtn.disabled = !this.value.trim();
+  });
+
+  gcalClientIdInput.addEventListener('change', function(){
+    var id = this.value.trim();
+    if(id !== state.gcalClientId){
+      state.gcalClientId = id;
+      saveStateToHash(state);
+    }
+    gcalConnectBtn.disabled = !id;
+  });
+
+  gcalConnectBtn.addEventListener('click', function(){
+    var id = gcalClientIdInput.value.trim();
+    if(!id) return;
+    state.gcalClientId = id;
+    saveStateToHash(state);
+    gcalConnectBtn.disabled = true;
+    gcalConnectBtn.textContent = '연결 중…';
+    if(!gcalGsiLoaded){
+      loadGsiAndSetup();
+      // retry after GSI loads
+      var t = setTimeout(function(){
+        gcalConnectBtn.disabled = false;
+        gcalConnectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google 연결';
+        if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'consent' });
+      }, 2000);
+      // when GSI actually loads, do consent prompt
+      var origSetup = setupTokenClient;
+      setupTokenClient = function(){
+        clearTimeout(t);
+        gcalTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: state.gcalClientId,
+          scope: 'https://www.googleapis.com/auth/calendar.readonly',
+          callback: function(resp){
+            onGCalToken(resp);
+            gcalConnectBtn.disabled = false;
+            gcalConnectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google 연결';
+          }
+        });
+        gcalTokenClient.requestAccessToken({ prompt:'consent' });
+        setupTokenClient = origSetup;
+      };
+    } else {
+      if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'consent' });
+      else setupTokenClient();
+      gcalConnectBtn.disabled = false;
+      gcalConnectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google 연결';
+    }
+  });
+
+  gcalDisconnectBtn.addEventListener('click', function(){
+    if(gcalToken && window.google && window.google.accounts){
+      try{ google.accounts.oauth2.revoke(gcalToken, function(){}); }catch(e){}
+    }
+    gcalToken = null;
+    if(gcalRefreshTimer){ clearTimeout(gcalRefreshTimer); gcalRefreshTimer = null; }
+    if(gcalPollTimer){ clearInterval(gcalPollTimer); gcalPollTimer = null; }
+    calEventsEl.innerHTML = '';
+    updateGCalSheetUI();
   });
 
   /* ---------- Timer ---------- */
@@ -1413,6 +1715,7 @@
   renderSW(0);
   pomoResetToFocus();
   setMode(state.mode || 'dday');
+  initGCalIfNeeded();
 
   setInterval(function(){
     ddayTick();
