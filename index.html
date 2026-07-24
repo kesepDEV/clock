@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>D-Day · 시계 · 타이머 · 스톱워치</title>
+<title>D-Day · 시계 · 타이머 · 스톱워치 · 대시보드</title>
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
@@ -111,7 +111,8 @@
   .tab{
     border:none; background:transparent; color:var(--text-secondary);
     font-family:inherit; font-size:0.82rem; font-weight:600;
-    padding:9px 14px; border-radius:999px; cursor:pointer;
+    padding:99px 14px; border-radius:999px; cursor:pointer;
+    padding:9px 14px;
     white-space:nowrap; flex:0 0 auto;
     transition:background .25s ease, color .25s ease;
   }
@@ -137,6 +138,7 @@
   .settings-btn svg{ width:20px; height:20px; }
   #appRoot[data-mode="timer"] .settings-btn,
   #appRoot[data-mode="stopwatch"] .settings-btn{ opacity:0; pointer-events:none; }
+  #appRoot[data-mode="dashboard"] .settings-btn{ opacity:1; pointer-events:auto; }
 
   .views{
     width:100%; height:100%;
@@ -148,12 +150,6 @@
     text-align:center; max-width:920px; width:100%;
   }
   .view[hidden]{ display:none; }
-
-  .hero{
-    display:flex; flex-direction:column;
-    align-items:center; gap:28px;
-    text-align:center; max-width:920px; width:100%;
-  }
 
   .eyebrow{
     font-size:clamp(1rem, 2.6vw, 1.35rem);
@@ -601,6 +597,205 @@
   }
   .gcal-connect-btn:hover:not(:disabled){ background:rgba(255,255,255,0.12); }
   .gcal-connect-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  /* ============ DASHBOARD TAB ============ */
+  .dash-grid{
+    width:min(920px, 94vw); height:calc(100vh - 130px);
+    display:grid; grid-template-columns:1.15fr 0.85fr;
+    gap:16px;
+  }
+  .dash-col-right{
+    display:flex; flex-direction:column; gap:16px; min-height:0;
+  }
+  .dash-card{
+    position:relative;
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    border-radius:24px;
+    backdrop-filter:blur(28px) saturate(160%);
+    -webkit-backdrop-filter:blur(28px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 40px rgba(0,0,0,0.45);
+    padding:18px 20px;
+    display:flex; flex-direction:column;
+  }
+  .dash-card-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .dash-card-title{
+    font-size:0.72rem; font-weight:700; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--text-secondary);
+  }
+  .dash-pill{
+    font-size:0.68rem; font-weight:600; padding:4px 10px;
+    border-radius:100px; border:1px solid var(--glass-border);
+    color:var(--text-secondary);
+    display:flex; align-items:center; gap:6px;
+    cursor:pointer; background:transparent;
+    font-family:inherit;
+    transition:background .15s ease;
+  }
+  .dash-pill:hover{ background:rgba(255,255,255,0.08); }
+  .dash-pill.live{ color:var(--accent-done); border-color:rgba(48,209,88,0.3); background:rgba(48,209,88,0.08); }
+  .dash-pill .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  /* Dashboard Timeline */
+  .dash-timeline-card{ flex:1; overflow:hidden; }
+  .dash-timeline-scroll{
+    flex:1; overflow-y:auto; margin:0 -6px; padding:0 6px;
+    scrollbar-width:thin;
+  }
+  .dash-timeline-scroll::-webkit-scrollbar{ width:4px; }
+  .dash-timeline-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.18); border-radius:10px; }
+
+  .dash-timeline{
+    position:relative; padding-left:56px;
+  }
+  .dash-timeline::before{
+    content:''; position:absolute; left:44px; top:4px; bottom:4px;
+    width:1px;
+    background:linear-gradient(to bottom, transparent, var(--glass-border) 4%, var(--glass-border) 96%, transparent);
+  }
+  .dash-hour-row{
+    position:relative; min-height:56px; display:flex; align-items:flex-start;
+  }
+  .dash-hour-label{
+    position:absolute; left:-56px; top:-7px; width:44px;
+    text-align:right; font-size:0.68rem; color:var(--text-secondary);
+    font-variant-numeric:tabular-nums;
+  }
+  .dash-hour-tick{
+    position:absolute; left:-3px; top:0;
+    width:7px; height:7px; border-radius:50%;
+    background:var(--bg); border:1px solid var(--glass-border);
+  }
+  .dash-events-in-hour{
+    margin-left:14px; display:flex; flex-direction:column; gap:6px; width:100%;
+  }
+  .dash-event-chip{
+    background:rgba(255,255,255,0.06);
+    border:1px solid var(--glass-border);
+    border-left:3px solid var(--accent);
+    border-radius:10px; padding:8px 12px;
+    font-size:0.82rem; font-weight:600; color:var(--text-primary);
+    display:flex; flex-direction:column; gap:2px;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .dash-event-chip:hover{ background:rgba(255,255,255,0.1); transform:translateX(2px); }
+  .dash-event-chip .ev-time{
+    font-size:0.7rem; font-weight:600; color:var(--accent);
+    font-variant-numeric:tabular-nums;
+  }
+  .dash-event-chip.past{ opacity:0.38; }
+  .dash-event-chip.past .ev-time{ color:var(--text-secondary); }
+
+  .dash-now-line{
+    position:absolute; left:-9px; right:0; height:0;
+    display:flex; align-items:center; z-index:3; pointer-events:none;
+  }
+  .dash-now-line .dot{
+    width:11px; height:11px; border-radius:50%;
+    background:var(--accent-done);
+    box-shadow:0 0 0 3px rgba(48,209,88,0.18), 0 0 14px rgba(48,209,88,0.6);
+    flex-shrink:0;
+  }
+  .dash-now-line .line{
+    flex:1; height:1px;
+    background:linear-gradient(to right, var(--accent-done), transparent 85%);
+  }
+  .dash-now-line .nl-label{
+    font-size:0.62rem; font-weight:700; color:var(--accent-done);
+    margin-left:6px; background:var(--bg);
+    padding:2px 6px; border-radius:6px;
+  }
+
+  .dash-empty-state{
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; gap:12px; color:var(--text-secondary); padding:16px;
+  }
+  .dash-empty-state svg{ width:34px; height:34px; opacity:0.5; }
+  .dash-empty-state p{ font-size:0.82rem; max-width:260px; line-height:1.6; color:var(--text-secondary); }
+  .dash-empty-state .dash-open-settings-btn{
+    padding:10px 20px; border-radius:999px; border:none;
+    background:var(--accent); color:#fff;
+    font-family:inherit; font-size:0.82rem; font-weight:700;
+    cursor:pointer; transition:filter .15s ease, transform .15s ease;
+  }
+  .dash-empty-state .dash-open-settings-btn:hover{ filter:brightness(1.1); transform:translateY(-1px); }
+
+  /* Dashboard Clock card */
+  .dash-clock-card{
+    flex:1.05; align-items:center; justify-content:center; text-align:center; gap:6px;
+  }
+  .dash-clock-time{
+    font-weight:700; font-size:clamp(2.8rem, 5.5vw, 5rem);
+    line-height:1; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;
+    color:#fff; text-shadow:0 0 24px rgba(255,255,255,0.2);
+    display:flex; align-items:baseline; justify-content:center; gap:2px;
+  }
+  .dash-clock-time .sec{
+    font-size:0.38em; color:var(--text-secondary); font-weight:600; margin-left:6px;
+  }
+  .dash-clock-sub{
+    font-size:0.88rem; color:var(--text-secondary); font-weight:600; margin-top:6px;
+  }
+  .dash-clock-sub b{ color:var(--accent); }
+  .dash-day-ring-wrap{
+    margin-top:14px; position:relative; width:60px; height:60px;
+  }
+  .dash-day-ring-wrap svg{ transform:rotate(-90deg); }
+  .dash-day-ring-bg{ fill:none; stroke:rgba(255,255,255,0.1); stroke-width:5; }
+  .dash-day-ring-fg{ fill:none; stroke:var(--accent); stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 1s linear; }
+  .dash-day-ring-label{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:0.62rem; font-weight:700; color:var(--text-secondary);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* Dashboard Weather card */
+  .dash-weather-card{ flex:0.95; }
+  .dash-weather-main{
+    display:flex; align-items:center; justify-content:space-between; flex:1;
+  }
+  .dash-weather-temp{
+    font-size:clamp(2.4rem, 4vw, 3.4rem); font-weight:700; line-height:1;
+    color:#fff;
+  }
+  .dash-weather-city{
+    font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-top:4px;
+  }
+  .dash-weather-desc{
+    font-size:0.75rem; color:var(--text-secondary); margin-top:2px;
+  }
+  .dash-weather-icon{
+    font-size:2.8rem; line-height:1; flex-shrink:0;
+  }
+  .dash-weather-meta{
+    display:flex; gap:14px; margin-top:12px; padding-top:12px;
+    border-top:1px solid var(--glass-border);
+  }
+  .dash-weather-meta div{ flex:1; text-align:center; }
+  .dash-weather-meta .v{ font-size:0.92rem; font-weight:700; color:#fff; }
+  .dash-weather-meta .k{
+    font-size:0.62rem; color:var(--text-secondary); margin-top:2px;
+    letter-spacing:0.04em; text-transform:uppercase;
+  }
+  .dash-date-label{
+    font-size:0.82rem; font-weight:600; color:var(--text-secondary);
+    letter-spacing:0.02em;
+    position:absolute; top:18px; left:20px;
+  }
+  .dash-date-label b{ color:var(--text-primary); font-weight:700; }
+
+  @media (max-width:720px){
+    .dash-grid{ grid-template-columns:1fr; height:auto; }
+    .dash-col-right{ flex-direction:row; }
+    .dash-timeline-card{ max-height:50vh; }
+  }
+  @media (max-width:520px){
+    .dash-col-right{ flex-direction:column; }
+  }
 </style>
 </head>
 <body>
@@ -620,6 +815,7 @@
       <button class="tab" type="button" data-tab="timer">타이머</button>
       <button class="tab" type="button" data-tab="stopwatch">스톱워치</button>
       <button class="tab" type="button" data-tab="pomodoro">뽀모도로</button>
+      <button class="tab" type="button" data-tab="dashboard">대시보드</button>
     </div>
     <button class="settings-btn" id="settingsBtn" aria-label="설정">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -726,6 +922,55 @@
         <button class="ctrl-btn secondary" type="button" id="pomoSkipBtn">건너뛰기</button>
       </div>
     </section>
+
+    <!-- Dashboard -->
+    <section class="view" id="view-dashboard" hidden style="max-width:none;">
+      <div class="dash-grid">
+        <!-- Timeline Card -->
+        <div class="dash-card dash-timeline-card">
+          <div class="dash-card-head">
+            <span class="dash-card-title">오늘의 일정</span>
+            <button class="dash-pill" id="dashCalStatusPill"><span class="dot"></span><span id="dashCalStatusText">연결 안 됨</span></button>
+          </div>
+          <div class="dash-timeline-scroll" id="dashTimelineScroll">
+            <div class="dash-empty-state" id="dashAuthState">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+              <p>설정(⚙️)에서 Google Calendar를<br>연결하면 오늘 일정이 시간대별로<br>표시됩니다.</p>
+              <button class="dash-open-settings-btn" id="dashConnectBtn">⚙️ 설정 열기</button>
+            </div>
+            <div class="dash-timeline" id="dashTimeline" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div class="dash-col-right">
+          <!-- Clock Card -->
+          <div class="dash-card dash-clock-card">
+            <div class="dash-clock-time" id="dashClockTime">00:00<span class="sec" id="dashClockSec">:00</span></div>
+            <div class="dash-clock-sub" id="dashClockSub">—</div>
+            <div class="dash-day-ring-wrap">
+              <svg width="60" height="60" viewBox="0 0 60 60">
+                <circle class="dash-day-ring-bg" cx="30" cy="30" r="25"></circle>
+                <circle class="dash-day-ring-fg" id="dashDayRing" cx="30" cy="30" r="25" stroke-dasharray="157.08" stroke-dashoffset="157.08"></circle>
+              </svg>
+              <div class="dash-day-ring-label" id="dashDayRingLabel">0%</div>
+            </div>
+          </div>
+
+          <!-- Weather Card -->
+          <div class="dash-card dash-weather-card">
+            <div class="dash-card-head">
+              <span class="dash-card-title">날씨</span>
+              <button class="dash-pill" id="dashWeatherRefreshBtn" title="새로고침">↻</button>
+            </div>
+            <div id="dashWeatherBody">
+              <div class="dash-empty-state">
+                <p>설정에서 OpenWeather API 키를<br>입력하면 날씨가 표시됩니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div class="credit">Made by HS</div>
@@ -800,7 +1045,7 @@
       <span>OAuth 2.0 클라이언트 ID</span>
       <input type="text" id="gcalClientIdInput" placeholder="xxxxxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false"/>
     </div>
-    <button class="gcal-connect-btn" id="gcalConnectBtn" disabled>
+    <button class="gcal-connect-btn" id="gcalConnectBtn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
       Google 연결
     </button>
@@ -894,7 +1139,8 @@
     clock: document.getElementById('view-clock'),
     timer: document.getElementById('view-timer'),
     stopwatch: document.getElementById('view-stopwatch'),
-    pomodoro: document.getElementById('view-pomodoro')
+    pomodoro: document.getElementById('view-pomodoro'),
+    dashboard: document.getElementById('view-dashboard')
   };
 
   // Clock
@@ -1017,6 +1263,14 @@
       var decoded = decodeState(hash);
       if(decoded) return decoded;
     }
+    try {
+      var savedLS = localStorage.getItem('hs_index99_state');
+      if(savedLS) {
+        var parsed = JSON.parse(savedLS);
+        if(parsed) return parsed;
+      }
+    } catch(e){}
+
     var def = defaultTarget();
     return {
       title: '디데이',
@@ -1035,15 +1289,11 @@
   }
 
   function saveStateToHash(state){
-    // 직접 호스팅하는 도메인에서는 정상적으로 URL에 저장되어 새로고침 후에도 유지됩니다.
-    // 단, 일부 미리보기 환경(예: srcdoc 기반 iframe)은 보안상 history API 사용을 막아두므로,
-    // 그런 경우엔 조용히 무시하고 메모리상의 state만 사용합니다.
+    try { localStorage.setItem('hs_index99_state', JSON.stringify(state)); } catch(e){}
     try{
       var encoded = encodeState(state);
       if(encoded) window.history.replaceState(null, '', '#' + encoded);
-    }catch(e){
-      /* 새로고침 유지가 불가능한 환경 — 정상 동작에는 영향 없음 */
-    }
+    }catch(e){}
   }
 
   var state = loadState();
@@ -1279,27 +1529,22 @@
       '?timeMin=' + encodeURIComponent(todayStart.toISOString()) +
       '&timeMax=' + encodeURIComponent(end.toISOString()) +
       '&maxResults=5&singleEvents=true&orderBy=startTime';
-    console.log('[GCal] fetching:', url);
     fetch(url, { headers:{ Authorization:'Bearer ' + gcalToken } })
       .then(function(r){ return r.json(); })
       .then(function(data){
-        console.log('[GCal] response:', JSON.stringify(data).slice(0, 400));
         if(data.error){
-          console.warn('[GCal] API error:', data.error.code, data.error.message);
           if(data.error.code === 401){
             gcalToken = null; updateGCalSheetUI(); calEventsEl.innerHTML = '';
-            if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
+            if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'consent' });
           } else {
             calEventsEl.innerHTML = '<div class="cal-empty">오류: ' + (data.error.message || data.error.code) + '</div>';
           }
           return;
         }
         var items = (data.items || []).filter(function(ev){ return daysUntil(ev) <= 2; });
-        console.log('[GCal] items count:', items.length, items.map(function(e){ return e.summary; }));
         renderCalEvents(items);
       })
       .catch(function(err){
-        console.error('[GCal] fetch failed:', err);
         calEventsEl.innerHTML = '<div class="cal-empty">네트워크 오류</div>';
       });
   }
@@ -1318,7 +1563,6 @@
   function fetchWeather(){
     var key = state.weatherApiKey;
     if(!key){ weatherCard.style.display = 'none'; return; }
-    // 가락1동, 송파구 좌표
     var lat = 37.4928, lon = 127.1176;
     var url = 'https://api.openweathermap.org/data/2.5/weather' +
       '?lat=' + lat + '&lon=' + lon +
@@ -1365,13 +1609,10 @@
     optWeekday.disabled = !state.showDate;
     weatherApiKeyInput.value = state.weatherApiKey || '';
     if(state.gcalClientId) gcalClientIdInput.value = state.gcalClientId;
-    gcalConnectBtn.disabled = !gcalClientIdInput.value.trim();
   }
 
   function onGCalToken(tokenResponse){
-    console.log('[GCal] token response:', tokenResponse.error || 'OK');
     if(tokenResponse.error){ 
-      console.warn('[GCal] token error:', tokenResponse.error);
       calEventsEl.innerHTML = '<div class="cal-empty">인증 오류: ' + tokenResponse.error + '</div>';
       return; 
     }
@@ -1379,12 +1620,10 @@
     updateGCalSheetUI();
     calEventsEl.innerHTML = '<div class="cal-empty">일정 불러오는 중…</div>';
     fetchCalEvents();
-    // refresh 55min later (tokens expire in 1h)
     if(gcalRefreshTimer) clearTimeout(gcalRefreshTimer);
     gcalRefreshTimer = setTimeout(function(){
-      if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'' });
+      if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'consent' });
     }, 55 * 60 * 1000);
-    // poll every 5 min
     if(!gcalPollTimer) gcalPollTimer = setInterval(fetchCalEvents, 5 * 60 * 1000);
   }
 
@@ -1395,16 +1634,18 @@
       scope: 'https://www.googleapis.com/auth/calendar.readonly',
       callback: onGCalToken
     });
-    // silent auth (no prompt) — works if user already granted before
-    gcalTokenClient.requestAccessToken({ prompt:'' });
   }
 
-  function loadGsiAndSetup(){
-    if(gcalGsiLoaded){ setupTokenClient(); return; }
+  function loadGsiAndSetup(callback){
+    if(gcalGsiLoaded){ if(callback) callback(); return; }
     var s = document.createElement('script');
     s.src = 'https://accounts.google.com/gsi/client';
     s.async = true;
-    s.onload = function(){ gcalGsiLoaded = true; setupTokenClient(); };
+    s.onload = function(){
+      gcalGsiLoaded = true;
+      setupTokenClient();
+      if(callback) callback();
+    };
     document.head.appendChild(s);
   }
 
@@ -1412,57 +1653,29 @@
     if(state.gcalClientId) loadGsiAndSetup();
   }
 
-  // Client ID input → save & enable connect button
-  gcalClientIdInput.addEventListener('input', function(){
-    gcalConnectBtn.disabled = !this.value.trim();
-  });
-
   gcalClientIdInput.addEventListener('change', function(){
     var id = this.value.trim();
     if(id !== state.gcalClientId){
       state.gcalClientId = id;
       saveStateToHash(state);
     }
-    gcalConnectBtn.disabled = !id;
   });
 
   gcalConnectBtn.addEventListener('click', function(){
     var id = gcalClientIdInput.value.trim();
-    if(!id) return;
+    if(!id){
+      alert('OAuth 클라이언트 ID를 입력하세요.');
+      return;
+    }
     state.gcalClientId = id;
     saveStateToHash(state);
-    gcalConnectBtn.disabled = true;
-    gcalConnectBtn.textContent = '연결 중…';
-    if(!gcalGsiLoaded){
-      loadGsiAndSetup();
-      // retry after GSI loads
-      var t = setTimeout(function(){
-        gcalConnectBtn.disabled = false;
-        gcalConnectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google 연결';
-        if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'consent' });
-      }, 2000);
-      // when GSI actually loads, do consent prompt
-      var origSetup = setupTokenClient;
-      setupTokenClient = function(){
-        clearTimeout(t);
-        gcalTokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: state.gcalClientId,
-          scope: 'https://www.googleapis.com/auth/calendar.readonly',
-          callback: function(resp){
-            onGCalToken(resp);
-            gcalConnectBtn.disabled = false;
-            gcalConnectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google 연결';
-          }
-        });
-        gcalTokenClient.requestAccessToken({ prompt:'consent' });
-        setupTokenClient = origSetup;
-      };
-    } else {
-      if(gcalTokenClient) gcalTokenClient.requestAccessToken({ prompt:'consent' });
-      else setupTokenClient();
-      gcalConnectBtn.disabled = false;
-      gcalConnectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google 연결';
-    }
+
+    loadGsiAndSetup(function(){
+      setupTokenClient();
+      if(gcalTokenClient){
+        gcalTokenClient.requestAccessToken({ prompt: 'consent' });
+      }
+    });
   });
 
   gcalDisconnectBtn.addEventListener('click', function(){
@@ -1866,6 +2079,7 @@
 
   settingsBtn.addEventListener('click', function(){
     if(state.mode === 'clock') openClockSheet();
+    else if(state.mode === 'dashboard') openClockSheet();
     else if(state.mode === 'pomodoro') openPomoSheet();
     else openSheet();
   });
@@ -1902,9 +2116,226 @@
   initGCalIfNeeded();
   initWeather();
 
+  /* ============ DASHBOARD ============ */
+  var dashClockTime    = document.getElementById('dashClockTime');
+  var dashClockSec     = document.getElementById('dashClockSec');
+  var dashClockSub     = document.getElementById('dashClockSub');
+  var dashDayRing      = document.getElementById('dashDayRing');
+  var dashDayRingLabel = document.getElementById('dashDayRingLabel');
+  var dashCalStatusPill= document.getElementById('dashCalStatusPill');
+  var dashCalStatusText= document.getElementById('dashCalStatusText');
+  var dashAuthState    = document.getElementById('dashAuthState');
+  var dashTimeline     = document.getElementById('dashTimeline');
+  var dashWeatherBody  = document.getElementById('dashWeatherBody');
+  var DASH_RING_CIRC   = 2 * Math.PI * 25;
+
+  // Wire dashboard connect button to open clock settings
+  document.getElementById('dashConnectBtn').addEventListener('click', function(){ openClockSheet(); });
+  document.getElementById('dashWeatherRefreshBtn').addEventListener('click', function(){ fetchDashWeather(); });
+
+  function updateDashClock(){
+    var now = new Date();
+    var hh = pad(now.getHours());
+    var mm = pad(now.getMinutes());
+    var ss = pad(now.getSeconds());
+    dashClockTime.firstChild.textContent = hh + ':' + mm;
+    dashClockSec.textContent = ':' + ss;
+    var hour12 = now.getHours() % 12 || 12;
+    var ampm = now.getHours() < 12 ? '오전' : '오후';
+    dashClockSub.innerHTML = '<b>' + ampm + '</b> ' + hour12 + '시 ' + mm + '분';
+    var pct = (now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds()) / 86400;
+    dashDayRing.style.strokeDashoffset = DASH_RING_CIRC * (1 - pct);
+    dashDayRingLabel.textContent = Math.round(pct * 100) + '%';
+  }
+
+  /* Dashboard Calendar Status */
+  function updateDashCalUI(){
+    var connected = !!gcalToken;
+    dashCalStatusPill.classList.toggle('live', connected);
+    dashCalStatusText.textContent = connected ? '연결됨' : '연결 안 됨';
+    dashAuthState.style.display  = connected ? 'none' : '';
+    dashTimeline.style.display   = connected ? 'block' : 'none';
+  }
+
+  /* Override original updateGCalSheetUI to also sync dashboard */
+  var _origUpdateGCalSheetUI = updateGCalSheetUI;
+  updateGCalSheetUI = function(){
+    _origUpdateGCalSheetUI();
+    updateDashCalUI();
+  };
+
+  /* Dashboard Timeline render - reuse existing gcalToken & fetchCalEvents */
+  function renderDashTimeline(items){
+    dashAuthState.style.display  = 'none';
+    dashTimeline.style.display   = 'block';
+    dashTimeline.innerHTML = '';
+
+    // All-day events
+    var allDay = items.filter(function(ev){ return !ev.start || !ev.start.dateTime; });
+    var timed  = items.filter(function(ev){ return ev.start && ev.start.dateTime; });
+
+    if(allDay.length){
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-bottom:12px; margin-left:-42px;';
+      allDay.forEach(function(ev){
+        var chip = document.createElement('div');
+        chip.className = 'dash-event-chip';
+        chip.style.borderLeftColor = 'var(--accent-done)';
+        chip.innerHTML = '<span class="ev-time" style="color:var(--accent-done)">하루 종일</span><span>' + escHtml(ev.summary || '(제목 없음)') + '</span>';
+        wrap.appendChild(chip);
+      });
+      dashTimeline.appendChild(wrap);
+    }
+
+    for(var h = 0; h < 24; h++){
+      var row = document.createElement('div');
+      row.className = 'dash-hour-row';
+      row.dataset.hour = h;
+
+      var lbl = document.createElement('div');
+      lbl.className = 'dash-hour-label';
+      lbl.textContent = pad(h) + ':00';
+
+      var tick = document.createElement('div');
+      tick.className = 'dash-hour-tick';
+
+      var evW = document.createElement('div');
+      evW.className = 'dash-events-in-hour';
+
+      timed.filter(function(ev){
+        var d = new Date(ev.start.dateTime);
+        return d.getHours() === h;
+      }).forEach(function(ev){
+        var d = new Date(ev.start.dateTime);
+        var endD = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null;
+        var isPast = endD && endD < new Date();
+        var chip = document.createElement('div');
+        chip.className = 'dash-event-chip' + (isPast ? ' past' : '');
+        var ts = pad(d.getHours()) + ':' + pad(d.getMinutes());
+        chip.innerHTML = '<span class="ev-time">' + ts + '</span><span>' + escHtml(ev.summary || '(제목 없음)') + '</span>';
+        evW.appendChild(chip);
+      });
+
+      row.appendChild(lbl);
+      row.appendChild(tick);
+      row.appendChild(evW);
+      dashTimeline.appendChild(row);
+    }
+
+    updateDashNowLine(new Date());
+    dashScrollToNow();
+  }
+
+  function updateDashNowLine(now){
+    var old = dashTimeline.querySelector('.dash-now-line');
+    if(old) old.remove();
+    if(dashTimeline.style.display === 'none') return;
+    var row = dashTimeline.querySelector('.dash-hour-row[data-hour="' + now.getHours() + '"]');
+    if(!row) return;
+    var pct = now.getMinutes() / 60;
+    var nl = document.createElement('div');
+    nl.className = 'dash-now-line';
+    nl.style.top = (pct * row.offsetHeight) + 'px';
+    var hh = pad(now.getHours());
+    var mm = pad(now.getMinutes());
+    nl.innerHTML = '<div class="dot"></div><div class="line"></div><div class="nl-label">' + hh + ':' + mm + '</div>';
+    row.style.position = 'relative';
+    row.appendChild(nl);
+  }
+
+  function dashScrollToNow(){
+    var row = dashTimeline.querySelector('.dash-hour-row[data-hour="' + new Date().getHours() + '"]');
+    var scroller = document.getElementById('dashTimelineScroll');
+    if(row && scroller) scroller.scrollTop = row.offsetTop - 40;
+  }
+
+  /* Dashboard-specific fetch for calendar (uses same token) */
+  function fetchDashCalEvents(){
+    if(!gcalToken) return;
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    var end   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+    var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
+      '?timeMin=' + encodeURIComponent(start) +
+      '&timeMax=' + encodeURIComponent(end) +
+      '&singleEvents=true&orderBy=startTime';
+    fetch(url, { headers:{ Authorization:'Bearer ' + gcalToken } })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.error) return;
+        renderDashTimeline(data.items || []);
+      })
+      .catch(function(){});
+  }
+
+  /* Override original fetchCalEvents to also refresh dashboard */
+  var _origFetchCalEvents = fetchCalEvents;
+  fetchCalEvents = function(){
+    _origFetchCalEvents();
+    fetchDashCalEvents();
+  };
+
+  /* Dashboard Weather */
+  function fetchDashWeather(){
+    var key = state.weatherApiKey;
+    if(!key){
+      dashWeatherBody.innerHTML = '<div class="dash-empty-state"><p>설정에서 OpenWeather API 키를<br>입력하면 날씨가 표시됩니다.</p></div>';
+      return;
+    }
+    var lat = 37.4928, lon = 127.1176;
+    var url = 'https://api.openweathermap.org/data/2.5/weather' +
+      '?lat=' + lat + '&lon=' + lon +
+      '&units=metric&lang=kr&appid=' + key;
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d.cod !== 200){ dashWeatherBody.innerHTML = '<div class="dash-empty-state"><p>날씨를 불러올 수 없습니다.</p></div>'; return; }
+        var icon = OWM_ICONS[d.weather[0].icon] || '🌡️';
+        dashWeatherBody.innerHTML =
+          '<div class="dash-weather-main">' +
+            '<div>' +
+              '<div class="dash-weather-temp">' + Math.round(d.main.temp) + '°</div>' +
+              '<div class="dash-weather-city">' + escHtml(d.name) + '</div>' +
+              '<div class="dash-weather-desc">' + escHtml(d.weather[0].description) + '</div>' +
+            '</div>' +
+            '<div class="dash-weather-icon">' + icon + '</div>' +
+          '</div>' +
+          '<div class="dash-weather-meta">' +
+            '<div><div class="v">' + Math.round(d.main.feels_like) + '°</div><div class="k">체감</div></div>' +
+            '<div><div class="v">' + d.main.humidity + '%</div><div class="k">습도</div></div>' +
+            '<div><div class="v">' + Math.round(d.wind.speed * 3.6) + '</div><div class="k">풍속 km/h</div></div>' +
+          '</div>';
+      })
+      .catch(function(){
+        dashWeatherBody.innerHTML = '<div class="dash-empty-state"><p>날씨를 불러오지 못했습니다.</p></div>';
+      });
+  }
+
+  /* Override initWeather to also init dashboard weather */
+  var _origInitWeather = initWeather;
+  initWeather = function(){
+    _origInitWeather();
+    fetchDashWeather();
+  };
+
+  /* escHtml helper */
+  function escHtml(str){
+    var d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  /* Init dashboard */
+  updateDashClock();
+  updateDashCalUI();
+  fetchDashWeather();
+  if(gcalToken) fetchDashCalEvents();
+
   setInterval(function(){
     ddayTick();
     updateClock();
+    updateDashClock();
+    updateDashNowLine(new Date());
   }, 1000);
 })();
 </script>
