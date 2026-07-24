@@ -1003,7 +1003,7 @@
           <!-- News Card -->
           <div class="dash-card dash-news-card">
             <div class="dash-card-head">
-              <span class="dash-card-title">오늘의 뉴스</span>
+              <span class="dash-card-title">최신 뉴스</span>
               <button class="dash-pill" id="dashNewsRefreshBtn" title="새로고침">↻</button>
             </div>
             <div class="dash-news-body" id="dashNewsBody">
@@ -2373,43 +2373,53 @@
   /* Dashboard News */
   function fetchDashNews(){
     dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>뉴스를 불러오는 중...</p></div>';
-    // Use allorigins proxy to avoid CORS issues with the RSS feed
-    var rssUrl = encodeURIComponent('http://www.yonhapnewstv.co.kr/browse/feed/');
-    var url = 'https://api.allorigins.win/get?url=' + rssUrl;
-    fetch(url)
+    
+    var yonhapUrl = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('http://www.yonhapnewstv.co.kr/browse/feed/');
+    var jtbcUrl   = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://news-ex.jtbc.co.kr/v1/get/rss/newsflesh');
+    
+    function renderFeed(data, sourceName){
+      if(data.status !== 'ok' || !data.items || data.items.length === 0){
+        throw new Error('Feed error');
+      }
+      dashNewsBody.innerHTML = '';
+      var count = Math.min(data.items.length, 12);
+      for(var i=0; i<count; i++){
+        var item = data.items[i];
+        var pubDate = item.pubDate || '';
+        try {
+           var d = new Date(pubDate.replace(/-/g, '/')); // simple cross-browser date fix
+           pubDate = (d.getMonth()+1) + '월 ' + d.getDate() + '일 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        } catch(e) {}
+        
+        var a = document.createElement('a');
+        a.className = 'news-item';
+        a.href = item.link;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        
+        var logoSpan = sourceName === 'yonhap' 
+          ? '<span style="color:#003478; font-weight:800; font-size:0.75rem; margin-right:6px; letter-spacing:-0.5px;">연합뉴스</span>'
+          : '<span style="color:#E5004F; font-weight:800; font-size:0.75rem; margin-right:6px; letter-spacing:-0.5px;">JTBC</span>';
+          
+        a.innerHTML = '<span class="news-title">' + logoSpan + escHtml(item.title) + '</span><span class="news-date">' + escHtml(pubDate) + '</span>';
+        dashNewsBody.appendChild(a);
+      }
+    }
+
+    fetch(yonhapUrl)
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if(!data || !data.contents) throw new Error('No contents');
-        var parser = new DOMParser();
-        var xmlDoc = parser.parseFromString(data.contents, "text/xml");
-        var items = xmlDoc.querySelectorAll("item");
-        if(items.length === 0){
-          dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>최신 뉴스가 없습니다.</p></div>';
-          return;
-        }
-        dashNewsBody.innerHTML = '';
-        var count = Math.min(items.length, 12);
-        for(var i=0; i<count; i++){
-          var title = items[i].querySelector("title") ? items[i].querySelector("title").textContent : '';
-          var link = items[i].querySelector("link") ? items[i].querySelector("link").textContent : '#';
-          var pubDate = items[i].querySelector("pubDate") ? items[i].querySelector("pubDate").textContent : '';
-          
-          try {
-             var d = new Date(pubDate);
-             pubDate = (d.getMonth()+1) + '월 ' + d.getDate() + '일 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-          } catch(e) {}
-          
-          var a = document.createElement('a');
-          a.className = 'news-item';
-          a.href = link;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          a.innerHTML = '<span class="news-title">' + escHtml(title) + '</span><span class="news-date">' + escHtml(pubDate) + '</span>';
-          dashNewsBody.appendChild(a);
-        }
+         if(data.status === 'ok') renderFeed(data, 'yonhap');
+         else throw new Error('Yonhap failed');
       })
       .catch(function(){
-        dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>뉴스를 불러오지 못했습니다.</p></div>';
+         // Fallback to JTBC
+         fetch(jtbcUrl)
+           .then(function(r){ return r.json(); })
+           .then(function(data){ renderFeed(data, 'jtbc'); })
+           .catch(function(){
+             dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>뉴스를 불러오지 못했습니다.</p></div>';
+           });
       });
   }
 
