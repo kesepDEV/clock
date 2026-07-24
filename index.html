@@ -664,7 +664,7 @@
     background:linear-gradient(to bottom, transparent, var(--glass-border) 4%, var(--glass-border) 96%, transparent);
   }
   .dash-hour-row{
-    position:relative; min-height:56px; display:flex; align-items:flex-start;
+    position:relative; height:56px; display:flex; align-items:flex-start;
   }
   .dash-hour-label{
     position:absolute; left:-56px; top:-7px; width:44px;
@@ -677,20 +677,22 @@
     background:var(--bg); border:1px solid var(--glass-border);
   }
   .dash-events-in-hour{
-    margin-left:14px; display:flex; flex-direction:column; gap:6px; width:100%;
+    position:absolute; left:14px; top:0; right:6px; width:auto;
   }
   .dash-event-chip{
+    position:absolute; left:0; right:0; z-index:2;
     background:rgba(255,255,255,0.06);
     border:1px solid var(--glass-border);
     border-left:3px solid var(--accent);
-    border-radius:10px; padding:8px 12px;
-    font-size:0.82rem; font-weight:600; color:var(--text-primary);
+    border-radius:10px; padding:6px 12px;
+    font-size:0.92rem; font-weight:600; color:var(--text-primary);
     display:flex; flex-direction:column; gap:2px;
     transition:background .15s ease, transform .15s ease;
+    overflow:hidden;
   }
-  .dash-event-chip:hover{ background:rgba(255,255,255,0.1); transform:translateX(2px); }
+  .dash-event-chip:hover{ background:rgba(255,255,255,0.1); transform:translateX(2px); z-index:3; }
   .dash-event-chip .ev-time{
-    font-size:0.7rem; font-weight:600; color:var(--accent);
+    font-size:0.75rem; font-weight:600; color:var(--accent);
     font-variant-numeric:tabular-nums;
   }
   .dash-event-chip.past{ opacity:0.38; }
@@ -698,7 +700,7 @@
 
   .dash-now-line{
     position:absolute; left:-9px; right:0; height:0;
-    display:flex; align-items:center; z-index:3; pointer-events:none;
+    display:flex; align-items:center; z-index:4; pointer-events:none;
   }
   .dash-now-line .dot{
     width:11px; height:11px; border-radius:50%;
@@ -733,10 +735,11 @@
 
   /* Dashboard Clock card */
   .dash-clock-card{
-    flex:1.05; align-items:center; justify-content:center; text-align:center; gap:6px;
+    flex:0.75; align-items:center; justify-content:center; text-align:center; gap:4px;
+    padding:16px 22px;
   }
   .dash-clock-time{
-    font-weight:700; font-size:clamp(2.8rem, 5.5vw, 5rem);
+    font-weight:700; font-size:clamp(2.6rem, 5vw, 4.4rem);
     line-height:1; letter-spacing:-0.02em; font-variant-numeric:tabular-nums;
     color:#fff; text-shadow:0 0 24px rgba(255,255,255,0.2);
     display:flex; align-items:baseline; justify-content:center; gap:2px;
@@ -745,49 +748,69 @@
     font-size:0.38em; color:var(--text-secondary); font-weight:600; margin-left:6px;
   }
   .dash-clock-sub{
-    font-size:0.88rem; color:var(--text-secondary); font-weight:600; margin-top:6px;
+    font-size:0.85rem; color:var(--text-secondary); font-weight:600; margin-top:4px;
   }
   .dash-clock-sub b{ color:var(--accent); }
   .dash-day-ring-wrap{
-    margin-top:14px; position:relative; width:60px; height:60px;
+    margin-top:10px; position:relative; width:54px; height:54px;
   }
   .dash-day-ring-wrap svg{ transform:rotate(-90deg); }
-  .dash-day-ring-bg{ fill:none; stroke:rgba(255,255,255,0.1); stroke-width:5; }
-  .dash-day-ring-fg{ fill:none; stroke:var(--accent); stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 1s linear; }
+  .dash-day-ring-bg{ fill:none; stroke:rgba(255,255,255,0.1); stroke-width:4; }
+  .dash-day-ring-fg{ fill:none; stroke:var(--accent); stroke-width:4; stroke-linecap:round; transition:stroke-dashoffset 1s linear; }
   .dash-day-ring-label{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-size:0.62rem; font-weight:700; color:var(--text-secondary);
+    font-size:0.6rem; font-weight:700; color:var(--text-secondary);
     font-variant-numeric:tabular-nums;
   }
 
   /* Dashboard Weather card */
-  .dash-weather-card{ flex:0.95; }
+  .dash-weather-card{ flex:0.65; padding:16px 22px; }
   .dash-weather-main{
     display:flex; align-items:center; justify-content:space-between; flex:1;
   }
   .dash-weather-temp{
-    font-size:clamp(2.4rem, 4vw, 3.4rem); font-weight:700; line-height:1;
+    font-size:clamp(2.2rem, 3.8vw, 3rem); font-weight:700; line-height:1;
     color:#fff;
   }
   .dash-weather-city{
-    font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-top:4px;
+    font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-top:4px;
   }
   .dash-weather-desc{
     font-size:0.75rem; color:var(--text-secondary); margin-top:2px;
   }
   .dash-weather-icon{
-    font-size:2.8rem; line-height:1; flex-shrink:0;
+    font-size:2.4rem; line-height:1; flex-shrink:0;
   }
   .dash-weather-meta{
-    display:flex; gap:14px; margin-top:12px; padding-top:12px;
+    display:flex; gap:14px; margin-top:10px; padding-top:10px;
     border-top:1px solid var(--glass-border);
   }
   .dash-weather-meta div{ flex:1; text-align:center; }
-  .dash-weather-meta .v{ font-size:0.92rem; font-weight:700; color:#fff; }
+  .dash-weather-meta .v{ font-size:0.85rem; font-weight:700; color:#fff; }
   .dash-weather-meta .k{
-    font-size:0.62rem; color:var(--text-secondary); margin-top:2px;
+    font-size:0.6rem; color:var(--text-secondary); margin-top:2px;
     letter-spacing:0.04em; text-transform:uppercase;
   }
+  
+  /* Dashboard News Card */
+  .dash-news-card{ flex:1; overflow:hidden; padding:16px 22px; }
+  .dash-news-body{
+    flex:1; overflow-y:auto; scrollbar-width:none; display:flex; flex-direction:column; gap:8px; margin-top:4px;
+  }
+  .dash-news-body::-webkit-scrollbar{ display:none; }
+  .news-item{
+    padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex; flex-direction:column; gap:4px; text-decoration:none;
+  }
+  .news-item:last-child{ border-bottom:none; }
+  .news-item:hover .news-title{ color:var(--accent); }
+  .news-title{
+    font-size:0.88rem; font-weight:600; color:var(--text-primary);
+    line-height:1.4; transition:color .2s;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .news-date{ font-size:0.7rem; color:var(--text-secondary); }
+
   .dash-date-label{
     font-size:0.82rem; font-weight:600; color:var(--text-secondary);
     letter-spacing:0.02em;
@@ -974,6 +997,17 @@
               <div class="dash-empty-state">
                 <p>설정에서 OpenWeather API 키를<br>입력하면 날씨가 표시됩니다.</p>
               </div>
+            </div>
+          </div>
+
+          <!-- News Card -->
+          <div class="dash-card dash-news-card">
+            <div class="dash-card-head">
+              <span class="dash-card-title">오늘의 뉴스</span>
+              <button class="dash-pill" id="dashNewsRefreshBtn" title="새로고침">↻</button>
+            </div>
+            <div class="dash-news-body" id="dashNewsBody">
+              <div class="dash-empty-state"><p>뉴스를 불러오는 중...</p></div>
             </div>
           </div>
         </div>
@@ -2135,11 +2169,13 @@
   var dashAuthState    = document.getElementById('dashAuthState');
   var dashTimeline     = document.getElementById('dashTimeline');
   var dashWeatherBody  = document.getElementById('dashWeatherBody');
+  var dashNewsBody     = document.getElementById('dashNewsBody');
   var DASH_RING_CIRC   = 2 * Math.PI * 25;
 
   // Wire dashboard connect button to open clock settings
   document.getElementById('dashConnectBtn').addEventListener('click', function(){ openClockSheet(); });
   document.getElementById('dashWeatherRefreshBtn').addEventListener('click', function(){ fetchDashWeather(); });
+  document.getElementById('dashNewsRefreshBtn').addEventListener('click', function(){ fetchDashNews(); });
 
   function updateDashClock(){
     var now = new Date();
@@ -2195,56 +2231,41 @@
       dashTimeline.appendChild(wrap);
     }
 
+    // Build timeline background structure
     for(var h = 0; h < 24; h++){
       var row = document.createElement('div');
       row.className = 'dash-hour-row';
       row.dataset.hour = h;
-
-      var lbl = document.createElement('div');
-      lbl.className = 'dash-hour-label';
-      lbl.textContent = pad(h) + ':00';
-
-      var tick = document.createElement('div');
-      tick.className = 'dash-hour-tick';
-
-      var evW = document.createElement('div');
-      evW.className = 'dash-events-in-hour';
-
-      timed.filter(function(ev){
-        var evStart = new Date(ev.start.dateTime);
-        var evEnd   = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(evStart.getTime() + 3600000);
-        var hourStart = new Date(evStart);
-        hourStart.setHours(h, 0, 0, 0);
-        var hourEnd = new Date(hourStart.getTime() + 3600000);
-        return evStart < hourEnd && evEnd > hourStart;
-      }).forEach(function(ev){
-        var evStart = new Date(ev.start.dateTime);
-        var evEnd   = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(evStart.getTime() + 3600000);
-        var now = new Date();
-        var isPast = evEnd < now;
-        var isStartHour = evStart.getHours() === h;
-        var isEndHour = evEnd.getHours() === h || (evEnd.getHours() === h && evEnd.getMinutes() > 0);
-        
-        var chip = document.createElement('div');
-        chip.className = 'dash-event-chip' + (isPast ? ' past' : '');
-        var timeLabel;
-        if(isStartHour){
-          timeLabel = pad(evStart.getHours()) + ':' + pad(evStart.getMinutes()) + ' ~ ' + pad(evEnd.getHours()) + ':' + pad(evEnd.getMinutes());
-        } else {
-          timeLabel = '\u21c5 ' + escHtml(ev.summary || '(\uc81c\ubaa9 \uc5c6\uc74c)').substring(0, 12);
-          chip.style.opacity = isPast ? '0.25' : '0.55';
-          chip.style.borderLeftStyle = 'dashed';
-        }
-        chip.innerHTML = '<span class="ev-time">' + timeLabel + '</span>' + (isStartHour ? '<span>' + escHtml(ev.summary || '(\uc81c\ubaa9 \uc5c6\uc74c)') + '</span>' : '');
-        
-        evW.appendChild(chip);
-      });
-
-      row.appendChild(lbl);
-      row.appendChild(tick);
-      row.appendChild(evW);
+      row.innerHTML = '<div class="dash-hour-label">' + pad(h) + ':00</div><div class="dash-hour-tick"></div><div class="dash-events-in-hour"></div>';
       dashTimeline.appendChild(row);
     }
+
+    // Place timed events absolute
+    timed.forEach(function(ev){
+      var evStart = new Date(ev.start.dateTime);
+      var evEnd   = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(evStart.getTime() + 3600000);
+      var now = new Date();
+      var isPast = evEnd < now;
+      var h = evStart.getHours();
+
+      var targetRow = dashTimeline.querySelector('.dash-hour-row[data-hour="' + h + '"]');
+      if(!targetRow) return;
+      var evContainer = targetRow.querySelector('.dash-events-in-hour');
+      
+      var topOffsetPx = (evStart.getMinutes() / 60) * 56;
+      var durationMins = (evEnd - evStart) / 60000;
+      var heightPx = (durationMins / 60) * 56;
+      
+      var chip = document.createElement('div');
+      chip.className = 'dash-event-chip' + (isPast ? ' past' : '');
+      chip.style.top = topOffsetPx + 'px';
+      chip.style.height = Math.max(heightPx - 2, 28) + 'px'; // minimum height and gap
+      
+      var ts = pad(evStart.getHours()) + ':' + pad(evStart.getMinutes()) + ' ~ ' + pad(evEnd.getHours()) + ':' + pad(evEnd.getMinutes());
+      chip.innerHTML = '<span class="ev-time">' + ts + '</span><span>' + escHtml(ev.summary || '(제목 없음)') + '</span>';
+      
+      evContainer.appendChild(chip);
+    });
 
     updateDashNowLine(new Date());
     dashScrollToNow();
@@ -2349,11 +2370,58 @@
     return d.innerHTML;
   }
 
+  /* Dashboard News */
+  function fetchDashNews(){
+    dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>뉴스를 불러오는 중...</p></div>';
+    // Use allorigins proxy to avoid CORS issues with the RSS feed
+    var rssUrl = encodeURIComponent('http://www.yonhapnewstv.co.kr/browse/feed/');
+    var url = 'https://api.allorigins.win/get?url=' + rssUrl;
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(!data || !data.contents) throw new Error('No contents');
+        var parser = new DOMParser();
+        var xmlDoc = parser.parseFromString(data.contents, "text/xml");
+        var items = xmlDoc.querySelectorAll("item");
+        if(items.length === 0){
+          dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>최신 뉴스가 없습니다.</p></div>';
+          return;
+        }
+        dashNewsBody.innerHTML = '';
+        var count = Math.min(items.length, 12);
+        for(var i=0; i<count; i++){
+          var title = items[i].querySelector("title") ? items[i].querySelector("title").textContent : '';
+          var link = items[i].querySelector("link") ? items[i].querySelector("link").textContent : '#';
+          var pubDate = items[i].querySelector("pubDate") ? items[i].querySelector("pubDate").textContent : '';
+          
+          try {
+             var d = new Date(pubDate);
+             pubDate = (d.getMonth()+1) + '월 ' + d.getDate() + '일 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+          } catch(e) {}
+          
+          var a = document.createElement('a');
+          a.className = 'news-item';
+          a.href = link;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.innerHTML = '<span class="news-title">' + escHtml(title) + '</span><span class="news-date">' + escHtml(pubDate) + '</span>';
+          dashNewsBody.appendChild(a);
+        }
+      })
+      .catch(function(){
+        dashNewsBody.innerHTML = '<div class="dash-empty-state"><p>뉴스를 불러오지 못했습니다.</p></div>';
+      });
+  }
+
   /* Init dashboard */
   updateDashClock();
   updateDashCalUI();
   fetchDashWeather();
+  fetchDashNews();
   if(gcalToken) fetchDashCalEvents();
+  
+  // Refresh news every 30 minutes
+  setInterval(fetchDashNews, 30 * 60 * 1000);
 
   setInterval(function(){
     ddayTick();
