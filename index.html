@@ -599,13 +599,20 @@
   .gcal-connect-btn:disabled{ opacity:0.35; cursor:not-allowed; }
 
   /* ============ DASHBOARD TAB ============ */
+  #appRoot[data-mode="dashboard"] .views{
+    align-items:stretch;
+  }
+  #appRoot[data-mode="dashboard"] #view-dashboard{
+    max-width:none; width:100%;
+    padding-top:52px;
+  }
   .dash-grid{
-    width:min(920px, 94vw); height:calc(100vh - 130px);
-    display:grid; grid-template-columns:1.15fr 0.85fr;
-    gap:16px;
+    width:100%; height:calc(100vh - 110px);
+    display:grid; grid-template-columns:1.2fr 0.8fr;
+    gap:18px;
   }
   .dash-col-right{
-    display:flex; flex-direction:column; gap:16px; min-height:0;
+    display:flex; flex-direction:column; gap:18px; min-height:0;
   }
   .dash-card{
     position:relative;
@@ -615,7 +622,7 @@
     backdrop-filter:blur(28px) saturate(160%);
     -webkit-backdrop-filter:blur(28px) saturate(160%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 18px 40px rgba(0,0,0,0.45);
-    padding:18px 20px;
+    padding:20px 22px;
     display:flex; flex-direction:column;
   }
   .dash-card-head{
@@ -795,6 +802,7 @@
   }
   @media (max-width:520px){
     .dash-col-right{ flex-direction:column; }
+    .dash-grid{ gap:12px; }
   }
 </style>
 </head>
@@ -2203,16 +2211,32 @@
       evW.className = 'dash-events-in-hour';
 
       timed.filter(function(ev){
-        var d = new Date(ev.start.dateTime);
-        return d.getHours() === h;
+        var evStart = new Date(ev.start.dateTime);
+        var evEnd   = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(evStart.getTime() + 3600000);
+        var hourStart = new Date(evStart);
+        hourStart.setHours(h, 0, 0, 0);
+        var hourEnd = new Date(hourStart.getTime() + 3600000);
+        return evStart < hourEnd && evEnd > hourStart;
       }).forEach(function(ev){
-        var d = new Date(ev.start.dateTime);
-        var endD = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null;
-        var isPast = endD && endD < new Date();
+        var evStart = new Date(ev.start.dateTime);
+        var evEnd   = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(evStart.getTime() + 3600000);
+        var now = new Date();
+        var isPast = evEnd < now;
+        var isStartHour = evStart.getHours() === h;
+        var isEndHour = evEnd.getHours() === h || (evEnd.getHours() === h && evEnd.getMinutes() > 0);
+        
         var chip = document.createElement('div');
         chip.className = 'dash-event-chip' + (isPast ? ' past' : '');
-        var ts = pad(d.getHours()) + ':' + pad(d.getMinutes());
-        chip.innerHTML = '<span class="ev-time">' + ts + '</span><span>' + escHtml(ev.summary || '(제목 없음)') + '</span>';
+        var timeLabel;
+        if(isStartHour){
+          timeLabel = pad(evStart.getHours()) + ':' + pad(evStart.getMinutes()) + ' ~ ' + pad(evEnd.getHours()) + ':' + pad(evEnd.getMinutes());
+        } else {
+          timeLabel = '\u21c5 ' + escHtml(ev.summary || '(\uc81c\ubaa9 \uc5c6\uc74c)').substring(0, 12);
+          chip.style.opacity = isPast ? '0.25' : '0.55';
+          chip.style.borderLeftStyle = 'dashed';
+        }
+        chip.innerHTML = '<span class="ev-time">' + timeLabel + '</span>' + (isStartHour ? '<span>' + escHtml(ev.summary || '(\uc81c\ubaa9 \uc5c6\uc74c)') + '</span>' : '');
+        
         evW.appendChild(chip);
       });
 
